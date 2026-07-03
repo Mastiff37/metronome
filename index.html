@@ -334,15 +334,16 @@
       }
 
       function renderFallbackNotation(pattern) {
-        const width = 720;
+        const width = 760;
         const height = 220;
         const staffLeft = 76;
-        const staffRight = 676;
+        const staffRight = 728;
         const staffTop = 80;
         const lineGap = 10;
         const noteY = staffTop + lineGap * 2;
         const stemHeight = 56;
-        const noteSpacing = (staffRight - staffLeft - 50) / Math.max(1, pattern.noteCount - 1);
+        const notationRight = 660;
+        const noteSpacing = (notationRight - staffLeft - 50) / Math.max(1, pattern.noteCount - 1);
         const beamGroupSize = getBeamGroupSize(pattern);
         const beamCount = pattern.duration === "16" ? 2 : pattern.duration === "8" ? 1 : 0;
         const noteXs = Array.from({ length: pattern.noteCount }, (_, index) => staffLeft + 50 + index * noteSpacing);
@@ -446,10 +447,10 @@
 
         try {
           const renderer = new VF.Renderer(notation, VF.Renderer.Backends.SVG);
-          renderer.resize(720, 220);
+          renderer.resize(760, 220);
 
           const context = renderer.getContext();
-          const stave = new VF.Stave(36, 50, 640);
+          const stave = new VF.Stave(36, 50, 700);
           stave.addClef("treble").addTimeSignature(timeSignature.value);
           stave.setContext(context).draw();
 
@@ -467,7 +468,7 @@
           });
 
           voice.addTickables(notes);
-          new VF.Formatter().joinVoices([voice]).format([voice], 500);
+          new VF.Formatter().joinVoices([voice]).format([voice], 470);
           voice.draw(context, stave);
 
           VF.Beam.generateBeams(notes).forEach((beam) => {
@@ -486,6 +487,17 @@
         bpmRange.value = bpm;
         bpmInput.value = bpm;
         bpmDisplay.textContent = bpm;
+      }
+
+      function restartRunningClock() {
+        if (!isRunning || !audioContext) {
+          return;
+        }
+
+        clickIndex = 0;
+        nextClickTime = audioContext.currentTime + 0.06;
+        measureStartTime = nextClickTime;
+        updatePlayhead();
       }
 
       function playClick(time, accent) {
@@ -561,10 +573,21 @@
         status.textContent = "Ready";
       }
 
-      bpmRange.addEventListener("input", (event) => syncBpm(event.target.value));
-      bpmInput.addEventListener("input", (event) => syncBpm(event.target.value));
-      timeSignature.addEventListener("change", renderNotation);
-      clickInterval.addEventListener("change", renderNotation);
+      function updateRhythm() {
+        renderNotation();
+        restartRunningClock();
+      }
+
+      bpmRange.addEventListener("input", (event) => {
+        syncBpm(event.target.value);
+        restartRunningClock();
+      });
+      bpmInput.addEventListener("input", (event) => {
+        syncBpm(event.target.value);
+        restartRunningClock();
+      });
+      timeSignature.addEventListener("change", updateRhythm);
+      clickInterval.addEventListener("change", updateRhythm);
       toggleButton.addEventListener("click", async () => {
         if (isRunning) {
           stop();
