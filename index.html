@@ -178,6 +178,12 @@
         align-items: center;
       }
 
+      .time-signature-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
       .start-button {
         width: 100%;
         height: 52px;
@@ -236,12 +242,33 @@
           </div>
 
           <div class="control-group">
-            <label for="timeSignature">Time Signature</label>
-            <select id="timeSignature">
-              <option value="4/4">4/4</option>
-              <option value="3/4">3/4</option>
-              <option value="2/4">2/4</option>
-              <option value="6/8">6/8</option>
+            <label for="timeNumerator">Time Signature</label>
+            <div class="time-signature-row">
+              <input id="timeNumerator" type="number" min="2" max="32" value="4" aria-label="Time signature numerator">
+              <select id="timeDenominator" aria-label="Time signature denominator">
+                <option value="4" selected>4</option>
+                <option value="8">8</option>
+                <option value="16">16</option>
+                <option value="32">32</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="tuplet">Tuple Type</label>
+            <select id="tuplet">
+              <option value="none" selected>None</option>
+              <option value="3">Triplets</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="tupleValue">Tuple Value</label>
+            <select id="tupleValue">
+              <option value="q">Quarter notes</option>
+              <option value="8" selected>Eighth notes</option>
+              <option value="16">Sixteenth notes</option>
+              <option value="32">Thirty-second notes</option>
             </select>
           </div>
 
@@ -251,6 +278,15 @@
               <option value="q">Quarter notes</option>
               <option value="8" selected>Eighth notes</option>
               <option value="16">Sixteenth notes</option>
+              <option value="32">Thirty-second notes</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="clickGrid">Click Grid</label>
+            <select id="clickGrid">
+              <option value="nominal" selected>Nominal</option>
+              <option value="tuple" disabled>Tuple</option>
             </select>
           </div>
 
@@ -265,8 +301,12 @@
       const bpmRange = document.querySelector("#bpmRange");
       const bpmInput = document.querySelector("#bpmInput");
       const bpmDisplay = document.querySelector("#bpmDisplay");
-      const timeSignature = document.querySelector("#timeSignature");
+      const timeNumerator = document.querySelector("#timeNumerator");
+      const timeDenominator = document.querySelector("#timeDenominator");
       const clickInterval = document.querySelector("#clickInterval");
+      const tuplet = document.querySelector("#tuplet");
+      const tupleValue = document.querySelector("#tupleValue");
+      const clickGrid = document.querySelector("#clickGrid");
       const notation = document.querySelector("#notation");
       const patternSummary = document.querySelector("#patternSummary");
       const toggleButton = document.querySelector("#toggleButton");
@@ -285,7 +325,9 @@
         q: "quarter notes",
         8: "eighth notes",
         16: "sixteenth notes",
+        32: "thirty-second notes",
       };
+      const maxDisplayedNotes = 64;
 
       function getVexFlow() {
         if (window.Vex && window.Vex.Flow) {
@@ -303,17 +345,199 @@
         return Math.min(240, Math.max(40, Number.parseInt(value, 10) || 100));
       }
 
+      function clampNumerator(value) {
+        return Math.min(32, Math.max(2, Number.parseInt(value, 10) || 4));
+      }
+
+      function getTimeSignature() {
+        return {
+          beats: clampNumerator(timeNumerator.value),
+          beatUnit: Number(timeDenominator.value),
+        };
+      }
+
+      function getIntervalValue(duration) {
+        return duration === "q" ? 4 : Number(duration);
+      }
+
+      function getMeasureUnits(beats, beatUnit) {
+        return beats * (32 / beatUnit);
+      }
+
+      function getSelectedTuplet() {
+        return tuplet.value === "none" ? null : Number(tuplet.value);
+      }
+
+      function getDurationUnits(duration, tupletValue = null) {
+        const baseUnits = 32 / getIntervalValue(duration);
+        return tupletValue ? baseUnits * (2 / tupletValue) : baseUnits;
+      }
+
+      function getDurationFromUnits(units) {
+        const durationsByUnit = {
+          8: "q",
+          4: "8",
+          2: "16",
+          1: "32",
+        };
+        return durationsByUnit[units];
+      }
+
+      function getRemainderEvents(startUnits, remainderUnits) {
+        const events = [];
+        let currentUnits = startUnits;
+        let remainingUnits = Math.round(remainderUnits);
+
+        [8, 4, 2, 1].forEach((units) => {
+          while (remainingUnits >= units) {
+            events.push({
+              duration: getDurationFromUnits(units),
+              durationUnits: units,
+              isNote: false,
+              startUnits: currentUnits,
+            });
+            currentUnits += units;
+            remainingUnits -= units;
+          }
+        });
+
+        return events;
+      }
+
+      function getClickEvents(beats, beatUnit, duration, tupletValue) {
+        const measureUnits = getMeasureUnits(beats, beatUnit);
+        if (tupletValue) {
+          const groupUnits = getDurationUnits(duration) * 2;
+          const noteUnits = groupUnits / tupletValue;
+          const groupCount = Math.floor(measureUnits / groupUnits);
+          return Array.from({ length: groupCount * tupletValue }, (_, index) => {
+            const groupIndex = Math.floor(index / tupletValue);
+            const noteIndex = index % tupletValue;
+            return {
+              duration,
+              durationUnits: noteUnits,
+              isClick: true,
+              startUnits: groupIndex * groupUnits + noteIndex * noteUnits,
+            };
+          });
+        }
+
+        const clickUnits = getDurationUnits(duration);
+        const clickCount = Math.floor(measureUnits / clickUnits);
+        return Array.from({ length: clickCount }, (_, index) => {
+          return {
+            duration,
+            durationUnits: clickUnits,
+            isClick: true,
+            startUnits: index * clickUnits,
+          };
+        });
+      }
+
+      function getDisplayEvents(beats, beatUnit, duration, tupletValue) {
+        const measureUnits = getMeasureUnits(beats, beatUnit);
+        const groupUnits = tupletValue ? getDurationUnits(duration) * 2 : null;
+        const noteUnits = tupletValue ? groupUnits / tupletValue : getDurationUnits(duration);
+        const groupCount = tupletValue ? Math.floor(measureUnits / groupUnits) : null;
+        const noteCount = tupletValue ? groupCount * tupletValue : Math.floor(measureUnits / noteUnits);
+        const events = Array.from({ length: noteCount }, (_, index) => {
+          const groupIndex = tupletValue ? Math.floor(index / tupletValue) : null;
+          const tupletIndex = tupletValue ? index % tupletValue : null;
+          return {
+            duration,
+            durationUnits: noteUnits,
+            isNote: true,
+            startUnits: tupletValue ? groupIndex * groupUnits + tupletIndex * noteUnits : index * noteUnits,
+            tuplet: tupletValue,
+            tupletGroup: groupIndex,
+            tupletIndex,
+          };
+        });
+        const usedUnits = tupletValue ? groupCount * groupUnits : noteCount * noteUnits;
+        const remainderUnits = measureUnits - usedUnits;
+        return events.concat(getRemainderEvents(usedUnits, remainderUnits));
+      }
+
+      function isUsableClickInterval(beats, beatUnit, duration) {
+        const tupletValue = clickGrid.value === "tuple" ? getSelectedTuplet() : null;
+        return getClickEvents(beats, beatUnit, duration, tupletValue).length > 0;
+      }
+
+      function isUsableTupleValue(beats, beatUnit, duration) {
+        const events = getDisplayEvents(beats, beatUnit, duration, getSelectedTuplet());
+        return events.some((event) => event.isNote) && events.length <= maxDisplayedNotes;
+      }
+
+      function syncTimeSignature() {
+        timeNumerator.value = clampNumerator(timeNumerator.value);
+        const tupleGridOption = clickGrid.querySelector('option[value="tuple"]');
+        tupleGridOption.disabled = !getSelectedTuplet();
+        if (!getSelectedTuplet() && clickGrid.value === "tuple") {
+          clickGrid.value = "nominal";
+        }
+        syncTupleValueOptions();
+        syncClickIntervalOptions();
+      }
+
+      function syncTupleValueOptions() {
+        const { beats, beatUnit } = getTimeSignature();
+        const options = Array.from(tupleValue.options);
+        let selectedIsValid = false;
+
+        options.forEach((option) => {
+          const isValid = isUsableTupleValue(beats, beatUnit, option.value);
+          option.disabled = !isValid;
+          selectedIsValid = selectedIsValid || (option.selected && isValid);
+        });
+
+        if (!selectedIsValid) {
+          const firstValidOption = options.find((option) => !option.disabled);
+          if (firstValidOption) {
+            tupleValue.value = firstValidOption.value;
+          }
+        }
+      }
+
+      function syncClickIntervalOptions() {
+        const { beats, beatUnit } = getTimeSignature();
+        const options = Array.from(clickInterval.options);
+        let selectedIsValid = false;
+
+        options.forEach((option) => {
+          const isValid = isUsableClickInterval(beats, beatUnit, option.value);
+          option.disabled = !isValid;
+          selectedIsValid = selectedIsValid || (option.selected && isValid);
+        });
+
+        if (!selectedIsValid) {
+          const firstValidOption = options.find((option) => !option.disabled);
+          if (firstValidOption) {
+            clickInterval.value = firstValidOption.value;
+          }
+        }
+      }
+
       function getPattern() {
-        const [beats, beatUnit] = timeSignature.value.split("/").map(Number);
-        const duration = clickInterval.value;
-        const notesPerQuarter = duration === "q" ? 1 : Number(duration) / 4;
+        syncTimeSignature();
+        const { beats, beatUnit } = getTimeSignature();
+        const displayDuration = tupleValue.value;
+        const clickDuration = clickInterval.value;
         const quarterNotesPerBar = beats * (4 / beatUnit);
+        const tupletValue = getSelectedTuplet();
+        const events = getDisplayEvents(beats, beatUnit, displayDuration, tupletValue);
+        const clickEvents = getClickEvents(beats, beatUnit, clickDuration, clickGrid.value === "tuple" ? tupletValue : null);
+        const clickCount = clickEvents.length;
         return {
           beats,
           beatUnit,
-          duration,
+          duration: displayDuration,
+          clickDuration,
+          tuplet: tupletValue,
           quarterNotesPerBar,
-          noteCount: Math.round(quarterNotesPerBar * notesPerQuarter),
+          events,
+          clickEvents,
+          clickCount,
+          measureUnits: getMeasureUnits(beats, beatUnit),
         };
       }
 
@@ -330,7 +554,8 @@
 
         const noteValue = Number(pattern.duration);
         const isCompoundEighth = pattern.beatUnit === 8 && pattern.beats % 3 === 0;
-        return isCompoundEighth ? (noteValue / 8) * 3 : noteValue / pattern.beatUnit;
+        const naturalGroupSize = pattern.tuplet || (isCompoundEighth ? (noteValue / 8) * 3 : noteValue / pattern.beatUnit);
+        return Math.max(2, Math.min(pattern.events.filter((event) => event.isNote).length, Math.round(naturalGroupSize)));
       }
 
       function renderFallbackNotation(pattern) {
@@ -343,16 +568,30 @@
         const noteY = staffTop + lineGap * 2;
         const stemHeight = 56;
         const notationRight = 660;
-        const noteSpacing = (notationRight - staffLeft - 50) / Math.max(1, pattern.noteCount - 1);
+        const notationLeft = staffLeft + 50;
+        const notationWidth = notationRight - notationLeft;
         const beamGroupSize = getBeamGroupSize(pattern);
-        const beamCount = pattern.duration === "16" ? 2 : pattern.duration === "8" ? 1 : 0;
-        const noteXs = Array.from({ length: pattern.noteCount }, (_, index) => staffLeft + 50 + index * noteSpacing);
+        const beamCounts = {
+          8: 1,
+          16: 2,
+          32: 3,
+        };
+        const beamCount = beamCounts[pattern.duration] || 0;
+        const eventXs = pattern.events.map((event) => notationLeft + (event.startUnits / pattern.measureUnits) * notationWidth);
+        const noteIndexes = pattern.events.reduce((indexes, event, index) => {
+          return event.isNote ? indexes.concat(index) : indexes;
+        }, []);
         const lines = Array.from({ length: 5 }, (_, index) => {
           const y = staffTop + index * lineGap;
           return `<line x1="${staffLeft}" y1="${y}" x2="${staffRight}" y2="${y}" stroke="#17191f" stroke-width="1"/>`;
         }).join("");
 
-        const notes = noteXs.map((x) => {
+        const notes = pattern.events.map((event, index) => {
+          const x = eventXs[index];
+          if (!event.isNote) {
+            return `<rect x="${x - 5}" y="${noteY - 20}" width="10" height="8" rx="1" fill="#17191f"/>`;
+          }
+
           const stemX = x + 7;
           const stemTop = noteY - stemHeight;
           return `
@@ -363,8 +602,9 @@
 
         let beams = "";
         if (beamGroupSize > 1 && beamCount > 0) {
-          for (let start = 0; start < noteXs.length; start += beamGroupSize) {
-            const group = noteXs.slice(start, start + beamGroupSize);
+          for (let start = 0; start < noteIndexes.length; start += beamGroupSize) {
+            const groupIndexes = noteIndexes.slice(start, start + beamGroupSize);
+            const group = groupIndexes.map((index) => eventXs[index]);
             if (group.length < 2) {
               continue;
             }
@@ -377,18 +617,29 @@
             if (beamCount === 2) {
               beams += `<line x1="${startX}" y1="${beamY + 9}" x2="${endX}" y2="${beamY + 9}" stroke="#17191f" stroke-width="5" stroke-linecap="butt"/>`;
             }
+
+            if (beamCount === 3) {
+              beams += `<line x1="${startX}" y1="${beamY + 9}" x2="${endX}" y2="${beamY + 9}" stroke="#17191f" stroke-width="5" stroke-linecap="butt"/>`;
+              beams += `<line x1="${startX}" y1="${beamY + 17}" x2="${endX}" y2="${beamY + 17}" stroke="#17191f" stroke-width="4" stroke-linecap="butt"/>`;
+            }
+
+            if (pattern.tuplet && groupIndexes.length === pattern.tuplet) {
+              beams += `<text x="${(startX + endX) / 2}" y="${beamY - 10}" fill="#17191f" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-weight="700" text-anchor="middle">${pattern.tuplet}</text>`;
+            }
           }
         }
 
-        const playheadStart = noteXs[0];
-        const playheadEnd = noteXs[noteXs.length - 1] + noteSpacing;
+        const playheadStart = eventXs[0];
+        const playheadEnd = notationLeft + notationWidth;
 
         notation.innerHTML = `
-          <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${timeSignature.value} ${intervalLabels[pattern.duration]} notation">
+          <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${pattern.beats}/${pattern.beatUnit} ${intervalLabels[pattern.duration]} notation">
             <rect class="playhead-bar" x="${playheadStart - 9}" y="${staffTop - 44}" width="18" height="116" rx="4" fill="#2471a3" fill-opacity="0.22"/>
             ${lines}
-            <text x="34" y="${staffTop + 31}" fill="#17191f" font-size="32" font-weight="700">${pattern.beats}</text>
-            <text x="34" y="${staffTop + 60}" fill="#17191f" font-size="32" font-weight="700">${pattern.beatUnit}</text>
+            <g fill="#17191f" font-family="Georgia, 'Times New Roman', serif" font-size="34" font-weight="700" text-anchor="middle">
+              <text x="50" y="${staffTop + 18}">${pattern.beats}</text>
+              <text x="50" y="${staffTop + 48}">${pattern.beatUnit}</text>
+            </g>
             ${notes}
             ${beams}
           </svg>
@@ -407,18 +658,17 @@
         }
       }
 
-      function addPlayheadToRenderedSvg(notes) {
+      function addPlayheadToRenderedSvg(tickables, pattern) {
         const svg = notation.querySelector("svg");
-        const noteXs = notes.map((note) => note.getAbsoluteX()).filter(Number.isFinite);
+        const tickableXs = tickables.map((tickable) => tickable.getAbsoluteX()).filter(Number.isFinite);
 
-        if (!svg || noteXs.length === 0) {
+        if (!svg || tickableXs.length === 0) {
           playhead = null;
           return;
         }
 
-        const delta = noteXs.length > 1 ? noteXs[1] - noteXs[0] : 80;
-        const startX = noteXs[0];
-        const endX = noteXs[noteXs.length - 1] + delta;
+        const startX = tickableXs[0];
+        const endX = 710;
         const bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         bar.setAttribute("class", "playhead-bar");
         bar.setAttribute("x", String(startX - 9));
@@ -437,7 +687,8 @@
         playhead = null;
 
         const pattern = getPattern();
-        patternSummary.textContent = `${timeSignature.value}, ${intervalLabels[pattern.duration]}`;
+        const tupletLabel = pattern.tuplet ? ` ${pattern.tuplet}-tuplets` : "";
+        patternSummary.textContent = `${pattern.beats}/${pattern.beatUnit}, ${intervalLabels[pattern.duration]}${tupletLabel}`;
 
         const VF = getVexFlow();
         if (!VF) {
@@ -451,31 +702,47 @@
 
           const context = renderer.getContext();
           const stave = new VF.Stave(36, 50, 700);
-          stave.addClef("treble").addTimeSignature(timeSignature.value);
+          stave.addClef("treble").addTimeSignature(`${pattern.beats}/${pattern.beatUnit}`);
           stave.setContext(context).draw();
 
-          const notes = Array.from({ length: pattern.noteCount }, () => {
+          const tickables = pattern.events.map((event) => {
             return new VF.StaveNote({
               clef: "treble",
               keys: ["b/4"],
-              duration: pattern.duration,
+              duration: event.isNote ? event.duration : `${event.duration}r`,
             });
           });
+
+          const noteTickables = tickables.filter((tickable, index) => pattern.events[index].isNote);
+          const renderedTuplets = [];
+          if (pattern.tuplet) {
+            for (let start = 0; start < noteTickables.length; start += pattern.tuplet) {
+              const tupletNotes = noteTickables.slice(start, start + pattern.tuplet);
+              if (tupletNotes.length === pattern.tuplet) {
+                renderedTuplets.push(new VF.Tuplet(tupletNotes, {
+                  num_notes: pattern.tuplet,
+                  notes_occupied: 2,
+                }));
+              }
+            }
+          }
 
           const voice = new VF.Voice({
             num_beats: pattern.beats,
             beat_value: pattern.beatUnit,
           });
 
-          voice.addTickables(notes);
+          voice.addTickables(tickables);
           new VF.Formatter().joinVoices([voice]).format([voice], 470);
           voice.draw(context, stave);
 
-          VF.Beam.generateBeams(notes).forEach((beam) => {
+          VF.Beam.generateBeams(noteTickables).forEach((beam) => {
             beam.setContext(context).draw();
           });
 
-          addPlayheadToRenderedSvg(notes);
+          renderedTuplets.forEach((renderedTuplet) => renderedTuplet.setContext(context).draw());
+
+          addPlayheadToRenderedSvg(tickables, pattern);
         } catch (error) {
           console.error(error);
           renderFallbackNotation(pattern);
@@ -532,11 +799,18 @@
 
       function scheduleClicks() {
         const pattern = getPattern();
-        const secondsPerClick = 60 / Number(bpmInput.value) / (pattern.duration === "q" ? 1 : Number(pattern.duration) / 4);
+        const measureSeconds = getMeasureSeconds();
+        const secondsPerUnit = measureSeconds / pattern.measureUnits;
 
         while (nextClickTime < audioContext.currentTime + 0.1) {
-          playClick(nextClickTime, clickIndex % pattern.noteCount === 0);
-          nextClickTime += secondsPerClick;
+          const clickPosition = clickIndex % pattern.clickEvents.length;
+          const clickEvent = pattern.clickEvents[clickPosition];
+          const nextClickEvent = pattern.clickEvents[(clickPosition + 1) % pattern.clickEvents.length];
+          const gapUnits = nextClickEvent.startUnits > clickEvent.startUnits
+            ? nextClickEvent.startUnits - clickEvent.startUnits
+            : pattern.measureUnits - clickEvent.startUnits + nextClickEvent.startUnits;
+          playClick(nextClickTime, clickEvent.startUnits === 0);
+          nextClickTime += gapUnits * secondsPerUnit;
           clickIndex += 1;
         }
       }
@@ -574,6 +848,7 @@
       }
 
       function updateRhythm() {
+        syncTimeSignature();
         renderNotation();
         restartRunningClock();
       }
@@ -586,8 +861,12 @@
         syncBpm(event.target.value);
         restartRunningClock();
       });
-      timeSignature.addEventListener("change", updateRhythm);
+      timeNumerator.addEventListener("input", updateRhythm);
+      timeDenominator.addEventListener("change", updateRhythm);
+      tuplet.addEventListener("change", updateRhythm);
+      tupleValue.addEventListener("change", updateRhythm);
       clickInterval.addEventListener("change", updateRhythm);
+      clickGrid.addEventListener("change", updateRhythm);
       toggleButton.addEventListener("click", async () => {
         if (isRunning) {
           stop();
@@ -603,6 +882,7 @@
       });
 
       syncBpm(100);
+      syncTimeSignature();
       renderNotation();
     </script>
   </body>
