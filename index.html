@@ -118,11 +118,22 @@
         min-height: 360px;
         padding: 26px 30px;
         place-items: center;
+        position: relative;
       }
 
       #notation svg {
         max-width: 100%;
         overflow: visible;
+      }
+
+      .playhead-bar {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 120ms ease;
+      }
+
+      .playhead-bar.is-running {
+        opacity: 1;
       }
 
       .controls {
@@ -263,9 +274,12 @@
 
       let audioContext;
       let schedulerTimer;
+      let animationFrame;
       let nextClickTime = 0;
       let clickIndex = 0;
       let isRunning = false;
+      let measureStartTime = 0;
+      let playhead = null;
 
       const intervalLabels = {
         q: "quarter notes",
@@ -298,8 +312,15 @@
           beats,
           beatUnit,
           duration,
+          quarterNotesPerBar,
           noteCount: Math.round(quarterNotesPerBar * notesPerQuarter),
         };
+      }
+
+      function getMeasureSeconds() {
+        const pattern = getPattern();
+        const secondsPerQuarter = 60 / Number(bpmInput.value);
+        return pattern.quarterNotesPerBar * secondsPerQuarter;
       }
 
       function getBeamGroupSize(pattern) {
@@ -358,8 +379,12 @@
           }
         }
 
+        const playheadStart = noteXs[0];
+        const playheadEnd = noteXs[noteXs.length - 1] + noteSpacing;
+
         notation.innerHTML = `
           <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${timeSignature.value} ${intervalLabels[pattern.duration]} notation">
+            <rect class="playhead-bar" x="${playheadStart - 9}" y="${staffTop - 44}" width="18" height="116" rx="4" fill="#2471a3" fill-opacity="0.22"/>
             ${lines}
             <text x="34" y="${staffTop + 31}" fill="#17191f" font-size="32" font-weight="700">${pattern.beats}</text>
             <text x="34" y="${staffTop + 60}" fill="#17191f" font-size="32" font-weight="700">${pattern.beatUnit}</text>
@@ -367,10 +392,48 @@
             ${beams}
           </svg>
         `;
+
+        setPlayheadSpan(playheadStart, playheadEnd);
+      }
+
+      function setPlayheadSpan(startX, endX) {
+        const bar = notation.querySelector(".playhead-bar");
+        playhead = bar ? { bar, startX, endX } : null;
+
+        if (playhead && isRunning) {
+          playhead.bar.classList.add("is-running");
+          updatePlayhead();
+        }
+      }
+
+      function addPlayheadToRenderedSvg(notes) {
+        const svg = notation.querySelector("svg");
+        const noteXs = notes.map((note) => note.getAbsoluteX()).filter(Number.isFinite);
+
+        if (!svg || noteXs.length === 0) {
+          playhead = null;
+          return;
+        }
+
+        const delta = noteXs.length > 1 ? noteXs[1] - noteXs[0] : 80;
+        const startX = noteXs[0];
+        const endX = noteXs[noteXs.length - 1] + delta;
+        const bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        bar.setAttribute("class", "playhead-bar");
+        bar.setAttribute("x", String(startX - 9));
+        bar.setAttribute("y", "26");
+        bar.setAttribute("width", "18");
+        bar.setAttribute("height", "126");
+        bar.setAttribute("rx", "4");
+        bar.setAttribute("fill", "#2471a3");
+        bar.setAttribute("fill-opacity", "0.22");
+        svg.insertBefore(bar, svg.firstChild);
+        setPlayheadSpan(startX, endX);
       }
 
       function renderNotation() {
         notation.innerHTML = "";
+        playhead = null;
 
         const pattern = getPattern();
         patternSummary.textContent = `${timeSignature.value}, ${intervalLabels[pattern.duration]}`;
@@ -410,6 +473,8 @@
           VF.Beam.generateBeams(notes).forEach((beam) => {
             beam.setContext(context).draw();
           });
+
+          addPlayheadToRenderedSvg(notes);
         } catch (error) {
           console.error(error);
           renderFallbackNotation(pattern);
@@ -436,6 +501,23 @@
         oscillator.stop(time + 0.065);
       }
 
+      function updatePlayhead() {
+        if (!isRunning || !playhead || !audioContext) {
+          return;
+        }
+
+        const measureSeconds = getMeasureSeconds();
+        const elapsed = Math.max(0, audioContext.currentTime - measureStartTime);
+        const progress = (elapsed % measureSeconds) / measureSeconds;
+        const x = playhead.startX + (playhead.endX - playhead.startX) * progress;
+        playhead.bar.setAttribute("x", String(x - 9));
+      }
+
+      function animatePlayhead() {
+        updatePlayhead();
+        animationFrame = window.requestAnimationFrame(animatePlayhead);
+      }
+
       function scheduleClicks() {
         const pattern = getPattern();
         const secondsPerClick = 60 / Number(bpmInput.value) / (pattern.duration === "q" ? 1 : Number(pattern.duration) / 4);
@@ -450,18 +532,30 @@
       async function start() {
         audioContext = audioContext || new AudioContext();
         await audioContext.resume();
+        renderNotation();
         isRunning = true;
         clickIndex = 0;
         nextClickTime = audioContext.currentTime + 0.06;
+        measureStartTime = nextClickTime;
         toggleButton.textContent = "Stop";
         toggleButton.classList.add("is-running");
         status.textContent = "Playing";
+        if (playhead) {
+          playhead.bar.classList.add("is-running");
+          updatePlayhead();
+        }
         schedulerTimer = window.setInterval(scheduleClicks, 25);
+        animationFrame = window.requestAnimationFrame(animatePlayhead);
       }
 
       function stop() {
         isRunning = false;
         window.clearInterval(schedulerTimer);
+        window.cancelAnimationFrame(animationFrame);
+        if (playhead) {
+          playhead.bar.classList.remove("is-running");
+          playhead.bar.setAttribute("x", String(playhead.startX - 9));
+        }
         toggleButton.textContent = "Start";
         toggleButton.classList.remove("is-running");
         status.textContent = "Ready";
