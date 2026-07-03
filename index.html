@@ -113,17 +113,113 @@
         font-size: 0.9rem;
       }
 
-      #notation {
+      #measureStack {
         display: grid;
-        min-height: 360px;
-        padding: 26px 30px;
+        align-content: start;
+        align-items: start;
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .measure-row {
+        display: grid;
+        grid-template-columns: 64px 1fr;
+        align-items: center;
+        min-height: 72px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfd;
+        overflow: hidden;
+      }
+
+      .measure-row.is-selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(36, 113, 163, 0.14);
+      }
+
+      .measure-row.is-playing {
+        background: #f3f8fb;
+      }
+
+      .measure-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 6px;
+        border-right: 1px solid var(--line);
+      }
+
+      .measure-select {
+        display: grid;
+        place-items: center;
+        border: 0;
+        background: transparent;
+        color: var(--ink);
+        cursor: pointer;
+        padding: 0;
+        text-align: center;
+      }
+
+      .measure-select strong {
+        font-size: 0.85rem;
+      }
+
+      .measure-select span {
+        display: none;
+      }
+
+      .delete-measure {
+        width: 26px;
+        height: 24px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--control);
+        color: var(--muted);
+        cursor: pointer;
+      }
+
+      .delete-measure:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
+      .measure-notation {
+        display: grid;
+        align-items: center;
+        min-height: 70px;
+        padding: 0 14px;
         place-items: center;
         position: relative;
       }
 
-      #notation svg {
+      .measure-notation svg {
         max-width: 100%;
         overflow: visible;
+      }
+
+      .notation-error {
+        color: #b42318;
+        font-size: 13px;
+        line-height: 1.4;
+        max-width: 620px;
+        text-align: center;
+      }
+
+      .add-measure {
+        height: 42px;
+        border: 1px dashed var(--accent);
+        border-radius: 8px;
+        background: #f6fbfe;
+        color: var(--accent);
+        cursor: pointer;
+        font-weight: 720;
+      }
+
+      .add-measure:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
       }
 
       .playhead-bar {
@@ -184,6 +280,23 @@
         gap: 10px;
       }
 
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 32px;
+      }
+
+      .checkbox-row input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent);
+      }
+
+      .checkbox-row label {
+        margin: 0;
+      }
+
       .start-button {
         width: 100%;
         height: 52px;
@@ -226,10 +339,10 @@
       <main>
         <section class="notation-area" aria-labelledby="notationTitle">
           <div class="notation-heading">
-            <h2 id="notationTitle">Click Pattern</h2>
-            <span id="patternSummary">4/4, eighth notes</span>
+            <h2 id="notationTitle">Measure Sequence</h2>
+            <span id="patternSummary">1 measure</span>
           </div>
-          <div id="notation" aria-label="Notation preview"></div>
+          <div id="measureStack" aria-label="Measure sequence"></div>
         </section>
 
         <aside class="controls" aria-label="Metronome controls">
@@ -283,11 +396,17 @@
           </div>
 
           <div class="control-group">
-            <label for="clickGrid">Click Grid</label>
-            <select id="clickGrid">
-              <option value="nominal" selected>Nominal</option>
-              <option value="tuple" disabled>Tuple</option>
-            </select>
+            <div class="checkbox-row">
+              <input id="straightGrid" type="checkbox">
+              <label for="straightGrid">Straight grid</label>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <div class="checkbox-row">
+              <input id="silentMeasure" type="checkbox">
+              <label for="silentMeasure">Silent</label>
+            </div>
           </div>
 
           <button class="start-button" id="toggleButton" type="button">Start</button>
@@ -296,7 +415,6 @@
       </main>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.6/build/cjs/vexflow.js"></script>
     <script>
       const bpmRange = document.querySelector("#bpmRange");
       const bpmInput = document.querySelector("#bpmInput");
@@ -306,20 +424,36 @@
       const clickInterval = document.querySelector("#clickInterval");
       const tuplet = document.querySelector("#tuplet");
       const tupleValue = document.querySelector("#tupleValue");
-      const clickGrid = document.querySelector("#clickGrid");
-      const notation = document.querySelector("#notation");
+      const straightGrid = document.querySelector("#straightGrid");
+      const silentMeasure = document.querySelector("#silentMeasure");
+      const measureStack = document.querySelector("#measureStack");
       const patternSummary = document.querySelector("#patternSummary");
       const toggleButton = document.querySelector("#toggleButton");
       const status = document.querySelector("#status");
 
+      const maxMeasures = 5;
       let audioContext;
       let schedulerTimer;
       let animationFrame;
-      let nextClickTime = 0;
       let clickIndex = 0;
       let isRunning = false;
       let measureStartTime = 0;
-      let playhead = null;
+      let nextMeasureTime = 0;
+      let selectedMeasureIndex = 0;
+      let currentMeasureIndex = 0;
+      let playheads = [];
+      let vexFlowApi = null;
+      let measures = [
+        {
+          beats: 4,
+          beatUnit: 4,
+          tupleType: null,
+          tupleValue: "8",
+          clickInterval: "8",
+          straightGrid: false,
+          sound: true,
+        },
+      ];
 
       const intervalLabels = {
         q: "quarter notes",
@@ -328,17 +462,83 @@
         32: "thirty-second notes",
       };
       const maxDisplayedNotes = 64;
+      // VexFlow 4.2.6 was never published; keep these pinned to real 4.2.5 entry points.
+      const vexFlowModuleSources = [
+        "https://cdn.jsdelivr.net/npm/vexflow@4.2.5/build/esm/entry/vexflow.js",
+        "https://cdn.jsdelivr.net/npm/vexflow@4.2.5/+esm",
+        "https://esm.sh/vexflow@4.2.5",
+      ];
+      const vexFlowSources = [
+        "https://cdn.jsdelivr.net/npm/vexflow@4.2.5/build/cjs/vexflow.js",
+        "https://unpkg.com/vexflow@4.2.5/build/cjs/vexflow.js",
+      ];
 
-      function getVexFlow() {
-        if (window.Vex && window.Vex.Flow) {
-          return window.Vex.Flow;
+      function loadScript(source) {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = source;
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error(`Could not load ${source}`));
+          document.head.appendChild(script);
+        });
+      }
+
+      async function loadVexFlow() {
+        for (const source of vexFlowModuleSources) {
+          try {
+            const module = await import(source);
+            vexFlowApi = resolveVexFlowApi(module);
+            if (vexFlowApi) {
+              return vexFlowApi;
+            }
+          } catch (error) {
+            console.warn(error);
+          }
         }
 
-        if (window.VexFlow) {
-          return window.VexFlow.Flow || window.VexFlow;
+        for (const source of vexFlowSources) {
+          try {
+            await loadScript(source);
+            vexFlowApi = getVexFlow();
+            if (vexFlowApi) {
+              return vexFlowApi;
+            }
+          } catch (error) {
+            console.warn(error);
+          }
+        }
+
+        console.warn("VexFlow could not be loaded from any configured source.");
+        return null;
+      }
+
+      function resolveVexFlowApi(candidate) {
+        if (!candidate) {
+          return null;
+        }
+
+        if (candidate.Renderer && candidate.Stave && candidate.StaveNote) {
+          return candidate;
+        }
+
+        if (candidate.Flow && candidate.Flow.Renderer) {
+          return candidate.Flow;
+        }
+
+        if (candidate.default) {
+          return resolveVexFlowApi(candidate.default);
         }
 
         return null;
+      }
+
+      function getVexFlow() {
+        if (vexFlowApi) {
+          return vexFlowApi;
+        }
+
+        return resolveVexFlowApi(window.Vex) || resolveVexFlowApi(window.VexFlow);
       }
 
       function clampBpm(value) {
@@ -349,7 +549,14 @@
         return Math.min(32, Math.max(2, Number.parseInt(value, 10) || 4));
       }
 
-      function getTimeSignature() {
+      function getTimeSignature(measure = null) {
+        if (measure) {
+          return {
+            beats: measure.beats,
+            beatUnit: measure.beatUnit,
+          };
+        }
+
         return {
           beats: clampNumerator(timeNumerator.value),
           beatUnit: Number(timeDenominator.value),
@@ -364,11 +571,16 @@
         return beats * (32 / beatUnit);
       }
 
-      function getSelectedTuplet() {
+      function getSelectedTuplet(measure = null) {
+        if (measure) {
+          return measure.tupleType;
+        }
+
         return tuplet.value === "none" ? null : Number(tuplet.value);
       }
 
       function getDurationUnits(duration, tupletValue = null) {
+        // Use 32nd notes as the integer base unit so 4/8/16/32 denominators stay exact.
         const baseUnits = 32 / getIntervalValue(duration);
         return tupletValue ? baseUnits * (2 / tupletValue) : baseUnits;
       }
@@ -404,9 +616,24 @@
         return events;
       }
 
+      function getSilentEvents(beats, beatUnit) {
+        // Silent measures still render visible rests so the playhead has notation to cross.
+        const duration = beatUnit === 4 ? "q" : String(beatUnit);
+        const durationUnits = getDurationUnits(duration);
+        return Array.from({ length: beats }, (_, index) => {
+          return {
+            duration,
+            durationUnits,
+            isNote: false,
+            startUnits: index * durationUnits,
+          };
+        });
+      }
+
       function getClickEvents(beats, beatUnit, duration, tupletValue) {
         const measureUnits = getMeasureUnits(beats, beatUnit);
         if (tupletValue) {
+          // Tuple clicks are complete tuplet groups only; partial groups are left silent.
           const groupUnits = getDurationUnits(duration) * 2;
           const noteUnits = groupUnits / tupletValue;
           const groupCount = Math.floor(measureUnits / groupUnits);
@@ -458,9 +685,9 @@
         return events.concat(getRemainderEvents(usedUnits, remainderUnits));
       }
 
-      function isUsableClickInterval(beats, beatUnit, duration) {
-        const tupletValue = clickGrid.value === "tuple" ? getSelectedTuplet() : null;
-        return getClickEvents(beats, beatUnit, duration, tupletValue).length > 0;
+      function isUsableClickInterval(beats, beatUnit, duration, useStraightGrid = straightGrid.checked, tupletValue = getSelectedTuplet()) {
+        const clickTupletValue = useStraightGrid ? null : tupletValue;
+        return getClickEvents(beats, beatUnit, duration, clickTupletValue).length > 0;
       }
 
       function isUsableTupleValue(beats, beatUnit, duration) {
@@ -468,12 +695,38 @@
         return events.some((event) => event.isNote) && events.length <= maxDisplayedNotes;
       }
 
+      function getSelectedMeasure() {
+        return measures[selectedMeasureIndex];
+      }
+
+      function loadSelectedMeasureControls() {
+        const measure = getSelectedMeasure();
+        timeNumerator.value = measure.beats;
+        timeDenominator.value = measure.beatUnit;
+        tuplet.value = measure.tupleType || "none";
+        tupleValue.value = measure.tupleValue;
+        clickInterval.value = measure.clickInterval;
+        straightGrid.checked = Boolean(measure.straightGrid);
+        silentMeasure.checked = !measure.sound;
+        syncTimeSignature();
+      }
+
+      function saveControlsToSelectedMeasure() {
+        const measure = getSelectedMeasure();
+        measure.beats = clampNumerator(timeNumerator.value);
+        measure.beatUnit = Number(timeDenominator.value);
+        measure.tupleType = getSelectedTuplet();
+        measure.tupleValue = tupleValue.value;
+        measure.clickInterval = clickInterval.value;
+        measure.straightGrid = straightGrid.checked;
+        measure.sound = !silentMeasure.checked;
+      }
+
       function syncTimeSignature() {
         timeNumerator.value = clampNumerator(timeNumerator.value);
-        const tupleGridOption = clickGrid.querySelector('option[value="tuple"]');
-        tupleGridOption.disabled = !getSelectedTuplet();
-        if (!getSelectedTuplet() && clickGrid.value === "tuple") {
-          clickGrid.value = "nominal";
+        straightGrid.disabled = !getSelectedTuplet();
+        if (!getSelectedTuplet()) {
+          straightGrid.checked = false;
         }
         syncTupleValueOptions();
         syncClickIntervalOptions();
@@ -517,20 +770,25 @@
         }
       }
 
-      function getPattern() {
-        syncTimeSignature();
-        const { beats, beatUnit } = getTimeSignature();
-        const displayDuration = tupleValue.value;
-        const clickDuration = clickInterval.value;
+      function getPattern(measure = getSelectedMeasure()) {
+        const { beats, beatUnit } = getTimeSignature(measure);
+        const displayDuration = measure.sound ? measure.tupleValue : null;
+        const clickDuration = measure.clickInterval;
         const quarterNotesPerBar = beats * (4 / beatUnit);
-        const tupletValue = getSelectedTuplet();
-        const events = getDisplayEvents(beats, beatUnit, displayDuration, tupletValue);
-        const clickEvents = getClickEvents(beats, beatUnit, clickDuration, clickGrid.value === "tuple" ? tupletValue : null);
+        const tupletValue = getSelectedTuplet(measure);
+        // Display and click grids are intentionally independent. By default tuple measures
+        // click the written tuple grid; Straight grid is the rarer nominal-grid override.
+        const events = measure.sound
+          ? getDisplayEvents(beats, beatUnit, displayDuration, tupletValue)
+          : getSilentEvents(beats, beatUnit);
+        const clickEvents = measure.sound
+          ? getClickEvents(beats, beatUnit, clickDuration, measure.straightGrid ? null : tupletValue)
+          : [];
         const clickCount = clickEvents.length;
         return {
           beats,
           beatUnit,
-          duration: displayDuration,
+          duration: displayDuration || "q",
           clickDuration,
           tuplet: tupletValue,
           quarterNotesPerBar,
@@ -538,11 +796,12 @@
           clickEvents,
           clickCount,
           measureUnits: getMeasureUnits(beats, beatUnit),
+          sound: measure.sound,
         };
       }
 
-      function getMeasureSeconds() {
-        const pattern = getPattern();
+      function getMeasureSeconds(measure = measures[currentMeasureIndex]) {
+        const pattern = getPattern(measure);
         const secondsPerQuarter = 60 / Number(bpmInput.value);
         return pattern.quarterNotesPerBar * secondsPerQuarter;
       }
@@ -552,168 +811,146 @@
           return 1;
         }
 
-        const noteValue = Number(pattern.duration);
-        const isCompoundEighth = pattern.beatUnit === 8 && pattern.beats % 3 === 0;
-        const naturalGroupSize = pattern.tuplet || (isCompoundEighth ? (noteValue / 8) * 3 : noteValue / pattern.beatUnit);
-        return Math.max(2, Math.min(pattern.events.filter((event) => event.isNote).length, Math.round(naturalGroupSize)));
-      }
-
-      function renderFallbackNotation(pattern) {
-        const width = 760;
-        const height = 220;
-        const staffLeft = 76;
-        const staffRight = 728;
-        const staffTop = 80;
-        const lineGap = 10;
-        const noteY = staffTop + lineGap * 2;
-        const stemHeight = 56;
-        const notationRight = 660;
-        const notationLeft = staffLeft + 50;
-        const notationWidth = notationRight - notationLeft;
-        const beamGroupSize = getBeamGroupSize(pattern);
-        const beamCounts = {
-          8: 1,
-          16: 2,
-          32: 3,
-        };
-        const beamCount = beamCounts[pattern.duration] || 0;
-        const eventXs = pattern.events.map((event) => notationLeft + (event.startUnits / pattern.measureUnits) * notationWidth);
-        const noteIndexes = pattern.events.reduce((indexes, event, index) => {
-          return event.isNote ? indexes.concat(index) : indexes;
-        }, []);
-        const lines = Array.from({ length: 5 }, (_, index) => {
-          const y = staffTop + index * lineGap;
-          return `<line x1="${staffLeft}" y1="${y}" x2="${staffRight}" y2="${y}" stroke="#17191f" stroke-width="1"/>`;
-        }).join("");
-
-        const notes = pattern.events.map((event, index) => {
-          const x = eventXs[index];
-          if (!event.isNote) {
-            return `<rect x="${x - 5}" y="${noteY - 20}" width="10" height="8" rx="1" fill="#17191f"/>`;
-          }
-
-          const stemX = x + 7;
-          const stemTop = noteY - stemHeight;
-          return `
-            <ellipse cx="${x}" cy="${noteY}" rx="8.5" ry="6" fill="#17191f" transform="rotate(-18 ${x} ${noteY})"/>
-            <line x1="${stemX}" y1="${noteY}" x2="${stemX}" y2="${stemTop}" stroke="#17191f" stroke-width="2"/>
-          `;
-        }).join("");
-
-        let beams = "";
-        if (beamGroupSize > 1 && beamCount > 0) {
-          for (let start = 0; start < noteIndexes.length; start += beamGroupSize) {
-            const groupIndexes = noteIndexes.slice(start, start + beamGroupSize);
-            const group = groupIndexes.map((index) => eventXs[index]);
-            if (group.length < 2) {
-              continue;
-            }
-
-            const startX = group[0] + 7;
-            const endX = group[group.length - 1] + 7;
-            const beamY = noteY - stemHeight;
-            beams += `<line x1="${startX}" y1="${beamY}" x2="${endX}" y2="${beamY}" stroke="#17191f" stroke-width="6" stroke-linecap="butt"/>`;
-
-            if (beamCount === 2) {
-              beams += `<line x1="${startX}" y1="${beamY + 9}" x2="${endX}" y2="${beamY + 9}" stroke="#17191f" stroke-width="5" stroke-linecap="butt"/>`;
-            }
-
-            if (beamCount === 3) {
-              beams += `<line x1="${startX}" y1="${beamY + 9}" x2="${endX}" y2="${beamY + 9}" stroke="#17191f" stroke-width="5" stroke-linecap="butt"/>`;
-              beams += `<line x1="${startX}" y1="${beamY + 17}" x2="${endX}" y2="${beamY + 17}" stroke="#17191f" stroke-width="4" stroke-linecap="butt"/>`;
-            }
-
-            if (pattern.tuplet && groupIndexes.length === pattern.tuplet) {
-              beams += `<text x="${(startX + endX) / 2}" y="${beamY - 10}" fill="#17191f" font-family="Georgia, 'Times New Roman', serif" font-size="18" font-weight="700" text-anchor="middle">${pattern.tuplet}</text>`;
-            }
-          }
+        if (pattern.tuplet) {
+          return pattern.tuplet;
         }
 
-        const playheadStart = eventXs[0];
-        const playheadEnd = notationLeft + notationWidth;
-
-        notation.innerHTML = `
-          <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${pattern.beats}/${pattern.beatUnit} ${intervalLabels[pattern.duration]} notation">
-            <rect class="playhead-bar" x="${playheadStart - 9}" y="${staffTop - 44}" width="18" height="116" rx="4" fill="#2471a3" fill-opacity="0.22"/>
-            ${lines}
-            <g fill="#17191f" font-family="Georgia, 'Times New Roman', serif" font-size="34" font-weight="700" text-anchor="middle">
-              <text x="50" y="${staffTop + 18}">${pattern.beats}</text>
-              <text x="50" y="${staffTop + 48}">${pattern.beatUnit}</text>
-            </g>
-            ${notes}
-            ${beams}
-          </svg>
-        `;
-
-        setPlayheadSpan(playheadStart, playheadEnd);
+        const noteValue = Number(pattern.duration);
+        const isCompoundEighth = pattern.beatUnit === 8 && pattern.beats % 3 === 0;
+        const groupSize = isCompoundEighth ? (noteValue / 8) * 3 : noteValue / pattern.beatUnit;
+        return Math.max(2, Math.round(groupSize));
       }
 
-      function setPlayheadSpan(startX, endX) {
-        const bar = notation.querySelector(".playhead-bar");
-        playhead = bar ? { bar, startX, endX } : null;
+      function getBeamGroups(VF, pattern, tickables) {
+        const groupSize = getBeamGroupSize(pattern);
+        const beams = [];
+        let group = [];
 
-        if (playhead && isRunning) {
-          playhead.bar.classList.add("is-running");
+        function flushGroup() {
+          for (let index = 0; index + groupSize <= group.length; index += groupSize) {
+            const notes = group.slice(index, index + groupSize);
+            if (notes.length > 1) {
+              beams.push(new VF.Beam(notes));
+            }
+          }
+          group = [];
+        }
+
+        pattern.events.forEach((event, index) => {
+          if (!event.isNote || event.duration === "q") {
+            flushGroup();
+            return;
+          }
+
+          group.push(tickables[index]);
+        });
+
+        flushGroup();
+        return beams;
+      }
+
+      function renderNotationError(container, measureIndex, error) {
+        const message = typeof error === "string" ? error : (error && error.message) || "Notation could not be rendered.";
+        const errorElement = document.createElement("div");
+        playheads[measureIndex] = null;
+        container.innerHTML = "";
+        errorElement.className = "notation-error";
+        errorElement.textContent = `Notation error: ${message}`;
+        container.appendChild(errorElement);
+      }
+
+      function setPlayheadSpan(measureIndex, container, startX, endX) {
+        const bar = container.querySelector(".playhead-bar");
+        playheads[measureIndex] = bar ? { bar, startX, endX } : null;
+
+        if (playheads[measureIndex] && isRunning && measureIndex === currentMeasureIndex) {
+          playheads[measureIndex].bar.classList.add("is-running");
           updatePlayhead();
         }
       }
 
-      function addPlayheadToRenderedSvg(tickables, pattern) {
-        const svg = notation.querySelector("svg");
-        const tickableXs = tickables.map((tickable) => tickable.getAbsoluteX()).filter(Number.isFinite);
+      function getTickableXs(tickables) {
+        return tickables
+          .map((tickable) => typeof tickable.getAbsoluteX === "function" ? tickable.getAbsoluteX() : NaN)
+          .filter(Number.isFinite);
+      }
 
-        if (!svg || tickableXs.length === 0) {
-          playhead = null;
+      function getNotationSpan(tickables, defaultStartX = 126, defaultEndX = 710) {
+        const tickableXs = getTickableXs(tickables);
+        const startX = tickableXs[0] || defaultStartX;
+        const lastX = tickableXs[tickableXs.length - 1];
+        const previousX = tickableXs[tickableXs.length - 2];
+        // The measure ends one displayed subdivision after the final visible note/rest.
+        // The staff extends farther than this, but the playhead uses this exact endpoint.
+        const finalStep = Number.isFinite(lastX) && Number.isFinite(previousX) ? lastX - previousX : 56;
+        const endX = Number.isFinite(lastX) ? lastX + finalStep : defaultEndX;
+        return { startX, endX, finalStep };
+      }
+
+      function addPlayheadToRenderedSvg(container, tickables, measureIndex, defaultStartX = 126, defaultEndX = 710) {
+        const svg = container.querySelector("svg");
+
+        if (!svg) {
+          playheads[measureIndex] = null;
           return;
         }
 
-        const startX = tickableXs[0];
-        const endX = 710;
+        const { startX, endX } = getNotationSpan(tickables, defaultStartX, defaultEndX);
         const bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         bar.setAttribute("class", "playhead-bar");
         bar.setAttribute("x", String(startX - 9));
-        bar.setAttribute("y", "26");
+        bar.setAttribute("y", "4");
         bar.setAttribute("width", "18");
-        bar.setAttribute("height", "126");
+        bar.setAttribute("height", "72");
         bar.setAttribute("rx", "4");
         bar.setAttribute("fill", "#2471a3");
         bar.setAttribute("fill-opacity", "0.22");
         svg.insertBefore(bar, svg.firstChild);
-        setPlayheadSpan(startX, endX);
+        setPlayheadSpan(measureIndex, container, startX, endX);
       }
 
-      function renderNotation() {
-        notation.innerHTML = "";
-        playhead = null;
+      function renderNotation(measureIndex) {
+        const container = measureStack.querySelector(`[data-notation-index="${measureIndex}"]`);
+        if (!container) {
+          return;
+        }
 
-        const pattern = getPattern();
-        const tupletLabel = pattern.tuplet ? ` ${pattern.tuplet}-tuplets` : "";
-        patternSummary.textContent = `${pattern.beats}/${pattern.beatUnit}, ${intervalLabels[pattern.duration]}${tupletLabel}`;
+        container.innerHTML = "";
+        playheads[measureIndex] = null;
+
+        const measure = measures[measureIndex];
+        const pattern = getPattern(measure);
 
         const VF = getVexFlow();
         if (!VF) {
-          renderFallbackNotation(pattern);
+          renderNotationError(container, measureIndex, "VexFlow did not load.");
           return;
         }
 
         try {
-          const renderer = new VF.Renderer(notation, VF.Renderer.Backends.SVG);
-          renderer.resize(760, 220);
+          const renderer = new VF.Renderer(container, VF.Renderer.Backends.SVG);
+          renderer.resize(760, 92);
 
           const context = renderer.getContext();
-          const stave = new VF.Stave(36, 50, 700);
-          stave.addClef("treble").addTimeSignature(`${pattern.beats}/${pattern.beatUnit}`);
-          stave.setContext(context).draw();
+          const stave = new VF.Stave(36, 10, 700);
+          stave.addTimeSignature(`${pattern.beats}/${pattern.beatUnit}`);
+          stave.setContext(context);
 
           const tickables = pattern.events.map((event) => {
-            return new VF.StaveNote({
-              clef: "treble",
+            const noteOptions = {
               keys: ["b/4"],
               duration: event.isNote ? event.duration : `${event.duration}r`,
-            });
+            };
+
+            if (event.isNote) {
+              noteOptions.stem_direction = 1;
+            }
+
+            return new VF.StaveNote(noteOptions);
           });
 
           const noteTickables = tickables.filter((tickable, index) => pattern.events[index].isNote);
+          const beams = getBeamGroups(VF, pattern, tickables);
           const renderedTuplets = [];
           if (pattern.tuplet) {
             for (let start = 0; start < noteTickables.length; start += pattern.tuplet) {
@@ -734,19 +971,126 @@
 
           voice.addTickables(tickables);
           new VF.Formatter().joinVoices([voice]).format([voice], 470);
+          const notationSpan = getNotationSpan(tickables, stave.getNoteStartX(), 710);
+          // Keep the visual staff roomy without changing the playhead/audio measure length.
+          const staveEndX = notationSpan.endX + notationSpan.finalStep + 52;
+          const staveWidth = Math.max(220, staveEndX - 36);
+          if (typeof stave.setWidth === "function") {
+            stave.setWidth(staveWidth);
+          }
+          stave.draw();
           voice.draw(context, stave);
 
-          VF.Beam.generateBeams(noteTickables).forEach((beam) => {
-            beam.setContext(context).draw();
-          });
+          try {
+            beams.forEach((beam) => beam.setContext(context).draw());
 
-          renderedTuplets.forEach((renderedTuplet) => renderedTuplet.setContext(context).draw());
+            renderedTuplets.forEach((renderedTuplet) => renderedTuplet.setContext(context).draw());
+          } catch (decorationError) {
+            console.warn(decorationError);
+          }
 
-          addPlayheadToRenderedSvg(tickables, pattern);
+          addPlayheadToRenderedSvg(container, tickables, measureIndex, stave.getNoteStartX(), notationSpan.endX);
         } catch (error) {
           console.error(error);
-          renderFallbackNotation(pattern);
+          renderNotationError(container, measureIndex, error);
         }
+      }
+
+      function describeMeasure(measure) {
+        const tupleText = measure.tupleType ? `${measure.tupleType}:${intervalLabels[measure.tupleValue]}` : intervalLabels[measure.tupleValue];
+        return measure.sound ? `${measure.beats}/${measure.beatUnit}, ${tupleText}` : `${measure.beats}/${measure.beatUnit}, silent`;
+      }
+
+      function updateMeasureSummary() {
+        patternSummary.textContent = `${measures.length} measure${measures.length === 1 ? "" : "s"}`;
+      }
+
+      function renderMeasureStack() {
+        measureStack.innerHTML = measures.map((measure, index) => {
+          const isSelected = index === selectedMeasureIndex ? " is-selected" : "";
+          const isPlaying = isRunning && index === currentMeasureIndex ? " is-playing" : "";
+          return `
+            <section class="measure-row${isSelected}${isPlaying}" data-measure-index="${index}">
+              <div class="measure-meta">
+                <button class="measure-select" type="button" data-select-measure="${index}">
+                  <strong>Measure ${index + 1}</strong>
+                  <span>${describeMeasure(measure)}</span>
+                </button>
+                <button class="delete-measure" type="button" data-delete-measure="${index}" ${measures.length === 1 ? "disabled" : ""} aria-label="Delete measure ${index + 1}">x</button>
+              </div>
+              <div class="measure-notation" data-notation-index="${index}" aria-label="Measure ${index + 1} notation"></div>
+            </section>
+          `;
+        }).join("");
+
+        const addButton = document.createElement("button");
+        addButton.className = "add-measure";
+        addButton.type = "button";
+        addButton.textContent = "+ Add measure";
+        addButton.disabled = measures.length >= maxMeasures;
+        addButton.addEventListener("click", addMeasure);
+        measureStack.appendChild(addButton);
+
+        measureStack.querySelectorAll("[data-select-measure]").forEach((button) => {
+          button.addEventListener("click", () => selectMeasure(Number(button.dataset.selectMeasure)));
+        });
+
+        measureStack.querySelectorAll("[data-delete-measure]").forEach((button) => {
+          button.addEventListener("click", () => deleteMeasure(Number(button.dataset.deleteMeasure)));
+        });
+
+        playheads = [];
+        measures.forEach((_, index) => renderNotation(index));
+        updateMeasureSummary();
+        updateActiveMeasureClasses();
+      }
+
+      function updateActiveMeasureClasses() {
+        measureStack.querySelectorAll("[data-measure-index]").forEach((row) => {
+          const index = Number(row.dataset.measureIndex);
+          row.classList.toggle("is-selected", index === selectedMeasureIndex);
+          row.classList.toggle("is-playing", isRunning && index === currentMeasureIndex);
+        });
+
+        playheads.forEach((entry, index) => {
+          if (entry) {
+            entry.bar.classList.toggle("is-running", isRunning && index === currentMeasureIndex);
+          }
+        });
+      }
+
+      function selectMeasure(index) {
+        saveControlsToSelectedMeasure();
+        selectedMeasureIndex = index;
+        loadSelectedMeasureControls();
+        updateActiveMeasureClasses();
+      }
+
+      function addMeasure() {
+        if (measures.length >= maxMeasures) {
+          return;
+        }
+
+        saveControlsToSelectedMeasure();
+        const clone = { ...measures[selectedMeasureIndex] };
+        measures.push(clone);
+        selectedMeasureIndex = measures.length - 1;
+        loadSelectedMeasureControls();
+        renderMeasureStack();
+        restartRunningClock();
+      }
+
+      function deleteMeasure(index) {
+        if (measures.length === 1) {
+          return;
+        }
+
+        measures.splice(index, 1);
+        selectedMeasureIndex = Math.min(selectedMeasureIndex, measures.length - 1);
+        currentMeasureIndex = Math.min(currentMeasureIndex, measures.length - 1);
+        loadSelectedMeasureControls();
+        renderMeasureStack();
+        restartRunningClock();
       }
 
       function syncBpm(value) {
@@ -761,9 +1105,11 @@
           return;
         }
 
+        currentMeasureIndex = Math.min(currentMeasureIndex, measures.length - 1);
         clickIndex = 0;
-        nextClickTime = audioContext.currentTime + 0.06;
-        measureStartTime = nextClickTime;
+        measureStartTime = audioContext.currentTime + 0.06;
+        nextMeasureTime = measureStartTime + getMeasureSeconds(measures[currentMeasureIndex]);
+        updateActiveMeasureClasses();
         updatePlayhead();
       }
 
@@ -781,13 +1127,14 @@
       }
 
       function updatePlayhead() {
+        const playhead = playheads[currentMeasureIndex];
         if (!isRunning || !playhead || !audioContext) {
           return;
         }
 
-        const measureSeconds = getMeasureSeconds();
+        const measureSeconds = getMeasureSeconds(measures[currentMeasureIndex]);
         const elapsed = Math.max(0, audioContext.currentTime - measureStartTime);
-        const progress = (elapsed % measureSeconds) / measureSeconds;
+        const progress = Math.min(1, elapsed / measureSeconds);
         const x = playhead.startX + (playhead.endX - playhead.startX) * progress;
         playhead.bar.setAttribute("x", String(x - 9));
       }
@@ -798,38 +1145,72 @@
       }
 
       function scheduleClicks() {
-        const pattern = getPattern();
-        const measureSeconds = getMeasureSeconds();
-        const secondsPerUnit = measureSeconds / pattern.measureUnits;
+        const lookAheadEnd = audioContext.currentTime + 0.1;
 
-        while (nextClickTime < audioContext.currentTime + 0.1) {
-          const clickPosition = clickIndex % pattern.clickEvents.length;
-          const clickEvent = pattern.clickEvents[clickPosition];
-          const nextClickEvent = pattern.clickEvents[(clickPosition + 1) % pattern.clickEvents.length];
-          const gapUnits = nextClickEvent.startUnits > clickEvent.startUnits
-            ? nextClickEvent.startUnits - clickEvent.startUnits
-            : pattern.measureUnits - clickEvent.startUnits + nextClickEvent.startUnits;
-          playClick(nextClickTime, clickEvent.startUnits === 0);
-          nextClickTime += gapUnits * secondsPerUnit;
+        while (true) {
+          const measure = measures[currentMeasureIndex];
+          const pattern = getPattern(measure);
+          const measureSeconds = getMeasureSeconds(measure);
+          const secondsPerUnit = measureSeconds / pattern.measureUnits;
+
+          if (!pattern.sound || pattern.clickEvents.length === 0) {
+            if (nextMeasureTime <= lookAheadEnd) {
+              advancePlaybackMeasure(nextMeasureTime);
+              continue;
+            }
+            break;
+          }
+
+          if (clickIndex >= pattern.clickEvents.length) {
+            if (nextMeasureTime <= lookAheadEnd) {
+              advancePlaybackMeasure(nextMeasureTime);
+              continue;
+            }
+            break;
+          }
+
+          const clickEvent = pattern.clickEvents[clickIndex];
+          // Schedule within the current measure from event positions; do not wrap the last
+          // click back to the downbeat, or the next bar sounds like an extra beat.
+          const clickTime = measureStartTime + clickEvent.startUnits * secondsPerUnit;
+          if (clickTime >= nextMeasureTime || clickTime >= lookAheadEnd) {
+            break;
+          }
+
+          playClick(clickTime, clickEvent.startUnits === 0);
           clickIndex += 1;
         }
+      }
+
+      function advancePlaybackMeasure(startTime) {
+        const currentPlayhead = playheads[currentMeasureIndex];
+        if (currentPlayhead) {
+          currentPlayhead.bar.classList.remove("is-running");
+          currentPlayhead.bar.setAttribute("x", String(currentPlayhead.startX - 9));
+        }
+
+        currentMeasureIndex = (currentMeasureIndex + 1) % measures.length;
+        measureStartTime = startTime;
+        nextMeasureTime = measureStartTime + getMeasureSeconds(measures[currentMeasureIndex]);
+        clickIndex = 0;
+        updateActiveMeasureClasses();
       }
 
       async function start() {
         audioContext = audioContext || new AudioContext();
         await audioContext.resume();
-        renderNotation();
+        saveControlsToSelectedMeasure();
+        renderMeasureStack();
         isRunning = true;
+        currentMeasureIndex = 0;
         clickIndex = 0;
-        nextClickTime = audioContext.currentTime + 0.06;
-        measureStartTime = nextClickTime;
+        measureStartTime = audioContext.currentTime + 0.06;
+        nextMeasureTime = measureStartTime + getMeasureSeconds(measures[currentMeasureIndex]);
         toggleButton.textContent = "Stop";
         toggleButton.classList.add("is-running");
         status.textContent = "Playing";
-        if (playhead) {
-          playhead.bar.classList.add("is-running");
-          updatePlayhead();
-        }
+        updateActiveMeasureClasses();
+        updatePlayhead();
         schedulerTimer = window.setInterval(scheduleClicks, 25);
         animationFrame = window.requestAnimationFrame(animatePlayhead);
       }
@@ -838,19 +1219,29 @@
         isRunning = false;
         window.clearInterval(schedulerTimer);
         window.cancelAnimationFrame(animationFrame);
-        if (playhead) {
-          playhead.bar.classList.remove("is-running");
-          playhead.bar.setAttribute("x", String(playhead.startX - 9));
-        }
+        playheads.forEach((entry) => {
+          if (entry) {
+            entry.bar.classList.remove("is-running");
+            entry.bar.setAttribute("x", String(entry.startX - 9));
+          }
+        });
         toggleButton.textContent = "Start";
         toggleButton.classList.remove("is-running");
         status.textContent = "Ready";
+        updateActiveMeasureClasses();
       }
 
       function updateRhythm() {
+        saveControlsToSelectedMeasure();
         syncTimeSignature();
-        renderNotation();
+        saveControlsToSelectedMeasure();
+        renderMeasureStack();
         restartRunningClock();
+      }
+
+      function updateClickInterval() {
+        tupleValue.value = clickInterval.value;
+        updateRhythm();
       }
 
       bpmRange.addEventListener("input", (event) => {
@@ -865,8 +1256,9 @@
       timeDenominator.addEventListener("change", updateRhythm);
       tuplet.addEventListener("change", updateRhythm);
       tupleValue.addEventListener("change", updateRhythm);
-      clickInterval.addEventListener("change", updateRhythm);
-      clickGrid.addEventListener("change", updateRhythm);
+      clickInterval.addEventListener("change", updateClickInterval);
+      straightGrid.addEventListener("change", updateRhythm);
+      silentMeasure.addEventListener("change", updateRhythm);
       toggleButton.addEventListener("click", async () => {
         if (isRunning) {
           stop();
@@ -881,9 +1273,15 @@
         }
       });
 
-      syncBpm(100);
-      syncTimeSignature();
-      renderNotation();
+      async function initializeApp() {
+        syncBpm(100);
+        loadSelectedMeasureControls();
+        renderMeasureStack();
+        await loadVexFlow();
+        renderMeasureStack();
+      }
+
+      initializeApp();
     </script>
   </body>
 </html>
