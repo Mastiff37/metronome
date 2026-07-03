@@ -6,38 +6,392 @@
     <title>Metronome</title>
     <style>
       :root {
-        color-scheme: light dark;
-        font-family: Arial, Helvetica, sans-serif;
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --bg: #f5f6f8;
+        --panel: #ffffff;
+        --ink: #17191f;
+        --muted: #68707d;
+        --line: #dfe3ea;
+        --accent: #2471a3;
+        --accent-strong: #155e88;
+        --control: #f0f3f7;
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       body {
-        display: grid;
+        min-width: 980px;
         min-height: 100vh;
         margin: 0;
-        place-items: center;
-        background: #f6f7f9;
-        color: #16181d;
+        background: var(--bg);
+        color: var(--ink);
       }
 
-      main {
-        text-align: center;
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .app {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        min-height: 100vh;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 24px 32px 18px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.82);
       }
 
       h1 {
-        margin: 0 0 0.5rem;
-        font-size: clamp(2.5rem, 8vw, 5rem);
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 720;
+        letter-spacing: 0;
       }
 
-      p {
+      .tempo-readout {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tempo-readout strong {
+        font-size: 2rem;
+        line-height: 1;
+      }
+
+      .tempo-readout span {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: minmax(600px, 1fr) 320px;
+        gap: 24px;
+        padding: 28px 32px 32px;
+      }
+
+      .notation-area,
+      .controls {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .notation-area {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        min-height: 480px;
+      }
+
+      .notation-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .notation-heading h2 {
         margin: 0;
-        font-size: 1.125rem;
+        font-size: 1rem;
+      }
+
+      .notation-heading span {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      #notation {
+        display: grid;
+        min-height: 360px;
+        padding: 26px 30px;
+        place-items: center;
+      }
+
+      #notation svg {
+        max-width: 100%;
+        overflow: visible;
+      }
+
+      .controls {
+        align-self: start;
+        padding: 20px;
+      }
+
+      .control-group {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+
+      label {
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 650;
+        text-transform: uppercase;
+      }
+
+      input,
+      select {
+        width: 100%;
+        height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--control);
+        color: var(--ink);
+        padding: 0 12px;
+      }
+
+      input[type="range"] {
+        height: 28px;
+        padding: 0;
+        accent-color: var(--accent);
+      }
+
+      .bpm-row {
+        display: grid;
+        grid-template-columns: 1fr 76px;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .start-button {
+        width: 100%;
+        height: 52px;
+        margin-top: 4px;
+        border: 0;
+        border-radius: 7px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        font-weight: 760;
+      }
+
+      .start-button:hover {
+        background: var(--accent-strong);
+      }
+
+      .start-button.is-running {
+        background: #a3342b;
+      }
+
+      .status {
+        min-height: 20px;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 0.9rem;
+        text-align: center;
       }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Hello, Metronome.</h1>
-      <p>End-to-end website workflow test.</p>
-    </main>
+    <div class="app">
+      <header>
+        <h1>Metronome</h1>
+        <div class="tempo-readout" aria-live="polite">
+          <strong id="bpmDisplay">100</strong>
+          <span>BPM</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="notation-area" aria-labelledby="notationTitle">
+          <div class="notation-heading">
+            <h2 id="notationTitle">Click Pattern</h2>
+            <span id="patternSummary">4/4, eighth notes</span>
+          </div>
+          <div id="notation" aria-label="Notation preview"></div>
+        </section>
+
+        <aside class="controls" aria-label="Metronome controls">
+          <div class="control-group">
+            <label for="bpmRange">Tempo</label>
+            <div class="bpm-row">
+              <input id="bpmRange" type="range" min="40" max="240" value="100">
+              <input id="bpmInput" type="number" min="40" max="240" value="100">
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="timeSignature">Time Signature</label>
+            <select id="timeSignature">
+              <option value="4/4">4/4</option>
+              <option value="3/4">3/4</option>
+              <option value="2/4">2/4</option>
+              <option value="6/8">6/8</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="clickInterval">Click Interval</label>
+            <select id="clickInterval">
+              <option value="q">Quarter notes</option>
+              <option value="8" selected>Eighth notes</option>
+              <option value="16">Sixteenth notes</option>
+            </select>
+          </div>
+
+          <button class="start-button" id="toggleButton" type="button">Start</button>
+          <div class="status" id="status">Ready</div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.6/build/cjs/vexflow.js"></script>
+    <script>
+      const VF = Vex.Flow;
+      const bpmRange = document.querySelector("#bpmRange");
+      const bpmInput = document.querySelector("#bpmInput");
+      const bpmDisplay = document.querySelector("#bpmDisplay");
+      const timeSignature = document.querySelector("#timeSignature");
+      const clickInterval = document.querySelector("#clickInterval");
+      const notation = document.querySelector("#notation");
+      const patternSummary = document.querySelector("#patternSummary");
+      const toggleButton = document.querySelector("#toggleButton");
+      const status = document.querySelector("#status");
+
+      let audioContext;
+      let schedulerTimer;
+      let nextClickTime = 0;
+      let clickIndex = 0;
+      let isRunning = false;
+
+      const intervalLabels = {
+        q: "quarter notes",
+        8: "eighth notes",
+        16: "sixteenth notes",
+      };
+
+      function clampBpm(value) {
+        return Math.min(240, Math.max(40, Number.parseInt(value, 10) || 100));
+      }
+
+      function getPattern() {
+        const [beats, beatUnit] = timeSignature.value.split("/").map(Number);
+        const duration = clickInterval.value;
+        const notesPerQuarter = duration === "q" ? 1 : Number(duration) / 4;
+        const quarterNotesPerBar = beats * (4 / beatUnit);
+        return {
+          beats,
+          beatUnit,
+          duration,
+          noteCount: Math.round(quarterNotesPerBar * notesPerQuarter),
+        };
+      }
+
+      function renderNotation() {
+        notation.innerHTML = "";
+
+        const pattern = getPattern();
+        const renderer = new VF.Renderer(notation, VF.Renderer.Backends.SVG);
+        renderer.resize(720, 220);
+
+        const context = renderer.getContext();
+        const stave = new VF.Stave(36, 50, 640);
+        stave.addClef("percussion").addTimeSignature(timeSignature.value);
+        stave.setContext(context).draw();
+
+        const notes = Array.from({ length: pattern.noteCount }, () => {
+          return new VF.StaveNote({
+            clef: "percussion",
+            keys: ["c/5"],
+            duration: pattern.duration,
+          });
+        });
+
+        const voice = new VF.Voice({
+          num_beats: pattern.beats,
+          beat_value: pattern.beatUnit,
+        });
+
+        voice.addTickables(notes);
+        new VF.Formatter().joinVoices([voice]).format([voice], 500);
+        voice.draw(context, stave);
+
+        VF.Beam.generateBeams(notes).forEach((beam) => {
+          beam.setContext(context).draw();
+        });
+
+        patternSummary.textContent = `${timeSignature.value}, ${intervalLabels[pattern.duration]}`;
+      }
+
+      function syncBpm(value) {
+        const bpm = clampBpm(value);
+        bpmRange.value = bpm;
+        bpmInput.value = bpm;
+        bpmDisplay.textContent = bpm;
+      }
+
+      function playClick(time, accent) {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.frequency.value = accent ? 1400 : 900;
+        gain.gain.setValueAtTime(0.0001, time);
+        gain.gain.exponentialRampToValueAtTime(accent ? 0.55 : 0.32, time + 0.004);
+        gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.055);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(time);
+        oscillator.stop(time + 0.065);
+      }
+
+      function scheduleClicks() {
+        const pattern = getPattern();
+        const secondsPerClick = 60 / Number(bpmInput.value) / (pattern.duration === "q" ? 1 : Number(pattern.duration) / 4);
+
+        while (nextClickTime < audioContext.currentTime + 0.1) {
+          playClick(nextClickTime, clickIndex % pattern.noteCount === 0);
+          nextClickTime += secondsPerClick;
+          clickIndex += 1;
+        }
+      }
+
+      async function start() {
+        audioContext = audioContext || new AudioContext();
+        await audioContext.resume();
+        isRunning = true;
+        clickIndex = 0;
+        nextClickTime = audioContext.currentTime + 0.06;
+        toggleButton.textContent = "Stop";
+        toggleButton.classList.add("is-running");
+        status.textContent = "Playing";
+        schedulerTimer = window.setInterval(scheduleClicks, 25);
+      }
+
+      function stop() {
+        isRunning = false;
+        window.clearInterval(schedulerTimer);
+        toggleButton.textContent = "Start";
+        toggleButton.classList.remove("is-running");
+        status.textContent = "Ready";
+      }
+
+      bpmRange.addEventListener("input", (event) => syncBpm(event.target.value));
+      bpmInput.addEventListener("input", (event) => syncBpm(event.target.value));
+      timeSignature.addEventListener("change", renderNotation);
+      clickInterval.addEventListener("change", renderNotation);
+      toggleButton.addEventListener("click", () => {
+        if (isRunning) {
+          stop();
+        } else {
+          start();
+        }
+      });
+
+      syncBpm(100);
+      renderNotation();
+    </script>
   </body>
 </html>
