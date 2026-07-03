@@ -251,7 +251,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.6/build/cjs/vexflow.js"></script>
     <script>
-      const VF = Vex.Flow;
       const bpmRange = document.querySelector("#bpmRange");
       const bpmInput = document.querySelector("#bpmInput");
       const bpmDisplay = document.querySelector("#bpmDisplay");
@@ -274,6 +273,18 @@
         16: "sixteenth notes",
       };
 
+      function getVexFlow() {
+        if (window.Vex && window.Vex.Flow) {
+          return window.Vex.Flow;
+        }
+
+        if (window.VexFlow) {
+          return window.VexFlow.Flow || window.VexFlow;
+        }
+
+        return null;
+      }
+
       function clampBpm(value) {
         return Math.min(240, Math.max(40, Number.parseInt(value, 10) || 100));
       }
@@ -291,40 +302,118 @@
         };
       }
 
+      function getBeamGroupSize(pattern) {
+        if (pattern.duration === "q") {
+          return 1;
+        }
+
+        const noteValue = Number(pattern.duration);
+        const isCompoundEighth = pattern.beatUnit === 8 && pattern.beats % 3 === 0;
+        return isCompoundEighth ? (noteValue / 8) * 3 : noteValue / pattern.beatUnit;
+      }
+
+      function renderFallbackNotation(pattern) {
+        const width = 720;
+        const height = 220;
+        const staffLeft = 76;
+        const staffRight = 676;
+        const staffTop = 80;
+        const lineGap = 10;
+        const noteY = staffTop + lineGap * 2;
+        const stemHeight = 56;
+        const noteSpacing = (staffRight - staffLeft - 50) / Math.max(1, pattern.noteCount - 1);
+        const beamGroupSize = getBeamGroupSize(pattern);
+        const beamCount = pattern.duration === "16" ? 2 : pattern.duration === "8" ? 1 : 0;
+        const noteXs = Array.from({ length: pattern.noteCount }, (_, index) => staffLeft + 50 + index * noteSpacing);
+        const lines = Array.from({ length: 5 }, (_, index) => {
+          const y = staffTop + index * lineGap;
+          return `<line x1="${staffLeft}" y1="${y}" x2="${staffRight}" y2="${y}" stroke="#17191f" stroke-width="1"/>`;
+        }).join("");
+
+        const notes = noteXs.map((x) => {
+          const stemX = x + 7;
+          const stemTop = noteY - stemHeight;
+          return `
+            <ellipse cx="${x}" cy="${noteY}" rx="8.5" ry="6" fill="#17191f" transform="rotate(-18 ${x} ${noteY})"/>
+            <line x1="${stemX}" y1="${noteY}" x2="${stemX}" y2="${stemTop}" stroke="#17191f" stroke-width="2"/>
+          `;
+        }).join("");
+
+        let beams = "";
+        if (beamGroupSize > 1 && beamCount > 0) {
+          for (let start = 0; start < noteXs.length; start += beamGroupSize) {
+            const group = noteXs.slice(start, start + beamGroupSize);
+            if (group.length < 2) {
+              continue;
+            }
+
+            const startX = group[0] + 7;
+            const endX = group[group.length - 1] + 7;
+            const beamY = noteY - stemHeight;
+            beams += `<line x1="${startX}" y1="${beamY}" x2="${endX}" y2="${beamY}" stroke="#17191f" stroke-width="6" stroke-linecap="butt"/>`;
+
+            if (beamCount === 2) {
+              beams += `<line x1="${startX}" y1="${beamY + 9}" x2="${endX}" y2="${beamY + 9}" stroke="#17191f" stroke-width="5" stroke-linecap="butt"/>`;
+            }
+          }
+        }
+
+        notation.innerHTML = `
+          <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${timeSignature.value} ${intervalLabels[pattern.duration]} notation">
+            ${lines}
+            <text x="34" y="${staffTop + 31}" fill="#17191f" font-size="32" font-weight="700">${pattern.beats}</text>
+            <text x="34" y="${staffTop + 60}" fill="#17191f" font-size="32" font-weight="700">${pattern.beatUnit}</text>
+            ${notes}
+            ${beams}
+          </svg>
+        `;
+      }
+
       function renderNotation() {
         notation.innerHTML = "";
 
         const pattern = getPattern();
-        const renderer = new VF.Renderer(notation, VF.Renderer.Backends.SVG);
-        renderer.resize(720, 220);
-
-        const context = renderer.getContext();
-        const stave = new VF.Stave(36, 50, 640);
-        stave.addClef("percussion").addTimeSignature(timeSignature.value);
-        stave.setContext(context).draw();
-
-        const notes = Array.from({ length: pattern.noteCount }, () => {
-          return new VF.StaveNote({
-            clef: "percussion",
-            keys: ["c/5"],
-            duration: pattern.duration,
-          });
-        });
-
-        const voice = new VF.Voice({
-          num_beats: pattern.beats,
-          beat_value: pattern.beatUnit,
-        });
-
-        voice.addTickables(notes);
-        new VF.Formatter().joinVoices([voice]).format([voice], 500);
-        voice.draw(context, stave);
-
-        VF.Beam.generateBeams(notes).forEach((beam) => {
-          beam.setContext(context).draw();
-        });
-
         patternSummary.textContent = `${timeSignature.value}, ${intervalLabels[pattern.duration]}`;
+
+        const VF = getVexFlow();
+        if (!VF) {
+          renderFallbackNotation(pattern);
+          return;
+        }
+
+        try {
+          const renderer = new VF.Renderer(notation, VF.Renderer.Backends.SVG);
+          renderer.resize(720, 220);
+
+          const context = renderer.getContext();
+          const stave = new VF.Stave(36, 50, 640);
+          stave.addClef("treble").addTimeSignature(timeSignature.value);
+          stave.setContext(context).draw();
+
+          const notes = Array.from({ length: pattern.noteCount }, () => {
+            return new VF.StaveNote({
+              clef: "treble",
+              keys: ["b/4"],
+              duration: pattern.duration,
+            });
+          });
+
+          const voice = new VF.Voice({
+            num_beats: pattern.beats,
+            beat_value: pattern.beatUnit,
+          });
+
+          voice.addTickables(notes);
+          new VF.Formatter().joinVoices([voice]).format([voice], 500);
+          voice.draw(context, stave);
+
+          VF.Beam.generateBeams(notes).forEach((beam) => {
+            beam.setContext(context).draw();
+          });
+        } catch (error) {
+          console.error(error);
+          renderFallbackNotation(pattern);
+        }
       }
 
       function syncBpm(value) {
@@ -382,11 +471,17 @@
       bpmInput.addEventListener("input", (event) => syncBpm(event.target.value));
       timeSignature.addEventListener("change", renderNotation);
       clickInterval.addEventListener("change", renderNotation);
-      toggleButton.addEventListener("click", () => {
+      toggleButton.addEventListener("click", async () => {
         if (isRunning) {
           stop();
         } else {
-          start();
+          try {
+            await start();
+          } catch (error) {
+            console.error(error);
+            stop();
+            status.textContent = "Audio could not start";
+          }
         }
       });
 
