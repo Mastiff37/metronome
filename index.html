@@ -56,14 +56,6 @@
       <aside class="controls" aria-label="Metronome settings">
         <h2 id="tempoSettingsTitle" class="outside-header">Tempo</h2>
         <section class="control-card" aria-labelledby="tempoSettingsTitle">
-          <div class="control-group" id="constantTempoGroup">
-            <label for="bpmRange">Constant BPM</label>
-            <div class="bpm-row">
-              <input id="bpmRange" type="range" min="40" max="240" value="100">
-              <input id="bpmInput" type="number" min="40" max="240" value="100">
-            </div>
-          </div>
-
           <div class="control-group">
             <label for="tempoMode">Mode</label>
             <select id="tempoMode">
@@ -71,6 +63,14 @@
               <option value="ramp">Ramp</option>
               <option value="updown">Up/down</option>
             </select>
+          </div>
+
+          <div class="control-group" id="constantTempoGroup">
+            <label for="bpmRange">Constant BPM</label>
+            <div class="bpm-row">
+              <input id="bpmRange" type="range" min="40" max="240" value="100">
+              <input id="bpmInput" type="number" min="40" max="240" value="100">
+            </div>
           </div>
 
           <div class="control-group" id="tempoTargetGroup">
