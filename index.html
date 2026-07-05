@@ -931,10 +931,14 @@
         return tuplet.value === "none" ? null : Number(tuplet.value);
       }
 
+      function getNextLowerPowerOf2(value) {
+        return Math.pow(2, Math.floor(Math.log2(value - 1 || 1)));
+      }
+
       function getDurationUnits(duration, tupletValue = null) {
         // Use 32nd notes as the integer base unit so 4/8/16/32 denominators stay exact.
         const baseUnits = 32 / getIntervalValue(duration);
-        return tupletValue ? baseUnits * (2 / tupletValue) : baseUnits;
+        return tupletValue ? baseUnits * (getNextLowerPowerOf2(tupletValue) / tupletValue) : baseUnits;
       }
 
       function getDurationFromUnits(units) {
@@ -996,7 +1000,7 @@
           // Tuple-aware clicks are anchored to Tuple Value. Coarser clicks stay straight;
           // equal/finer clicks land on tuple notes or even subdivisions inside them.
           const subdivisionsPerTupleNote = clickValue / tupleBaseValue;
-          const groupUnits = getDurationUnits(tupleDuration) * 2;
+          const groupUnits = getDurationUnits(tupleDuration) * getNextLowerPowerOf2(tupletValue);
           const noteUnits = groupUnits / tupletValue;
           const clickUnits = noteUnits / subdivisionsPerTupleNote;
           const clicksPerGroup = tupletValue * subdivisionsPerTupleNote;
@@ -1027,7 +1031,7 @@
 
       function getDisplayEvents(beats, beatUnit, duration, tupletValue) {
         const measureUnits = getMeasureUnits(beats, beatUnit);
-        const groupUnits = tupletValue ? getDurationUnits(duration) * 2 : null;
+        const groupUnits = tupletValue ? getDurationUnits(duration) * getNextLowerPowerOf2(tupletValue) : null;
         const noteUnits = tupletValue ? groupUnits / tupletValue : getDurationUnits(duration);
         const groupCount = tupletValue ? Math.floor(measureUnits / groupUnits) : null;
         const noteCount = tupletValue ? groupCount * tupletValue : Math.floor(measureUnits / noteUnits);
@@ -1348,7 +1352,7 @@
               if (tupletNotes.length === pattern.tuplet) {
                 renderedTuplets.push(new VF.Tuplet(tupletNotes, {
                   num_notes: pattern.tuplet,
-                  notes_occupied: 2,
+                  notes_occupied: getNextLowerPowerOf2(pattern.tuplet),
                 }));
               }
             }
