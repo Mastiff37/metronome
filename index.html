@@ -1267,7 +1267,7 @@
         return { startX, endX, finalStep };
       }
 
-      function addPlayheadToRenderedSvg(container, tickables, measureIndex, defaultStartX = 126, defaultEndX = 710, pattern = null) {
+      function addPlayheadToRenderedSvg(container, tickables, measureIndex, defaultStartX = 126, defaultEndX = 710, pattern = null, stave = null) {
         const svg = container.querySelector("svg");
 
         if (!svg) {
@@ -1279,9 +1279,19 @@
         const bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         bar.setAttribute("class", "playhead-bar");
         bar.setAttribute("x", String(startX - 9));
-        bar.setAttribute("y", "8");
+        
+        let barY = 8;
+        let barHeight = 80;
+        if (stave && typeof stave.getYForLine === "function") {
+          const topY = stave.getYForLine(0);
+          const bottomY = stave.getYForLine(4);
+          barY = topY - 20;
+          barHeight = (bottomY - topY) + 32;
+        }
+        
+        bar.setAttribute("y", String(barY));
         bar.setAttribute("width", "18");
-        bar.setAttribute("height", "80");
+        bar.setAttribute("height", String(barHeight));
         bar.setAttribute("rx", "4");
         bar.setAttribute("fill", "#2471a3");
         bar.setAttribute("fill-opacity", "0.22");
@@ -1359,7 +1369,17 @@
             stave.setWidth(staveWidth);
           }
           const renderWidth = Math.ceil(staveWidth + 72);
-          renderer.resize(renderWidth, 92);
+          
+          let renderHeight = 92;
+          let viewBoxY = 0;
+          if (typeof stave.getYForLine === "function") {
+            const topY = stave.getYForLine(0);
+            const bottomY = stave.getYForLine(4);
+            viewBoxY = topY - 32;
+            renderHeight = (bottomY - topY) + 48;
+          }
+
+          renderer.resize(renderWidth, renderHeight);
           stave.draw();
           voice.draw(context, stave);
 
@@ -1374,11 +1394,11 @@
           const svg = container.querySelector("svg");
           if (svg) {
             svg.setAttribute("width", String(renderWidth));
-            svg.setAttribute("height", "92");
-            svg.setAttribute("viewBox", `0 0 ${renderWidth} 92`);
+            svg.setAttribute("height", String(renderHeight));
+            svg.setAttribute("viewBox", `0 ${viewBoxY} ${renderWidth} ${renderHeight}`);
           }
 
-          addPlayheadToRenderedSvg(container, tickables, measureIndex, stave.getNoteStartX(), notationSpan.endX, pattern);
+          addPlayheadToRenderedSvg(container, tickables, measureIndex, stave.getNoteStartX(), notationSpan.endX, pattern, stave);
         } catch (error) {
           console.error(error);
           renderNotationError(container, measureIndex, error);
