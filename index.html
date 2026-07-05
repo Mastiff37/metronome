@@ -1,166 +1,172 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Metronome</title>
-    <link rel="stylesheet" href="style.css">
-  <body>
-    <div class="app">
-      <header>
-        <div class="brand" aria-label="Metronome brand">
-          <div class="brand-mark" aria-hidden="true">M</div>
-          <h1>Metronome</h1>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Metronome</title>
+  <link rel="stylesheet" href="style.css">
+
+<body>
+  <div class="app">
+    <header>
+      <div class="brand" aria-label="Metronome brand">
+        <div class="brand-mark" aria-hidden="true">M</div>
+        <h1>Metronome</h1>
+      </div>
+    </header>
+
+    <main>
+      <section class="main-sequence">
+        <div class="bpm-section">
+          <div class="bpm-container" aria-live="polite">
+            <strong id="bpmDisplay" class="card small-bpm-card">100</strong>
+            <h2 class="bpm-label">BPM</h2>
+          </div>
         </div>
-      </header>
 
-      <main>
-        <section class="main-sequence">
-          <div class="bpm-section">
-            <div class="bpm-container" aria-live="polite">
-              <strong id="bpmDisplay" class="card small-bpm-card">100</strong>
-              <h2 class="bpm-label">BPM</h2>
+        <div class="sequence-container">
+          <h2 id="notationTitle" class="visually-hidden">Measure Sequence</h2>
+          <div id="measureStack" aria-label="Measure sequence"></div>
+        </div>
+
+        <div class="card transport-card">
+          <div class="transport-row">
+            <button class="transport-button reset-button" id="resetButton" type="button" aria-label="Reset to beginning"
+              title="Reset">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 5h2v14H7z"></path>
+                <path d="M19 6.5v11L10.5 12z"></path>
+              </svg>
+            </button>
+            <button class="transport-button play-button" id="toggleButton" type="button" aria-label="Play" title="Play">
+              <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8 5.5v13l10-6.5z"></path>
+              </svg>
+              <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 5h4v14H7z"></path>
+                <path d="M13 5h4v14h-4z"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="status" id="status">Ready</div>
+        </div>
+      </section>
+
+      <aside class="controls" aria-label="Metronome settings">
+        <h2 id="tempoSettingsTitle" class="outside-header">Tempo</h2>
+        <section class="control-card" aria-labelledby="tempoSettingsTitle">
+          <div class="control-group" id="constantTempoGroup">
+            <label for="bpmRange">Constant BPM</label>
+            <div class="bpm-row">
+              <input id="bpmRange" type="range" min="40" max="240" value="100">
+              <input id="bpmInput" type="number" min="40" max="240" value="100">
             </div>
           </div>
 
-          <div class="sequence-container">
-            <h2 id="notationTitle" class="visually-hidden">Measure Sequence</h2>
-            <div id="measureStack" aria-label="Measure sequence"></div>
+          <div class="control-group">
+            <label for="tempoMode">Mode</label>
+            <select id="tempoMode">
+              <option value="constant" selected>Constant</option>
+              <option value="ramp">Ramp</option>
+              <option value="updown">Up/down</option>
+            </select>
           </div>
 
-          <div class="card transport-card">
-            <div class="transport-row">
-              <button class="transport-button reset-button" id="resetButton" type="button" aria-label="Reset to beginning" title="Reset">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M7 5h2v14H7z"></path>
-                  <path d="M19 6.5v11L10.5 12z"></path>
-                </svg>
-              </button>
-              <button class="transport-button play-button" id="toggleButton" type="button" aria-label="Play" title="Play">
-                <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M8 5.5v13l10-6.5z"></path>
-                </svg>
-                <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M7 5h4v14H7z"></path>
-                  <path d="M13 5h4v14h-4z"></path>
-                </svg>
-              </button>
+          <div class="control-group" id="tempoTargetGroup">
+            <label id="tempoRangeLabel">BPM</label>
+            <div class="tempo-range-row">
+              <input id="tempoStart" type="number" min="40" max="240" value="100" aria-label="Start BPM">
+              <span>to</span>
+              <input id="tempoTarget" type="number" min="40" max="240" value="140" aria-label="End BPM">
+              <span>in</span>
+              <input id="tempoDuration" type="number" min="1" max="120" step="1" value="10"
+                aria-label="Duration in minutes">
+              <span>min</span>
             </div>
-            <div class="status" id="status">Ready</div>
+          </div>
+
+          <div class="control-group tempo-chart" id="tempoChart">
+            <svg viewBox="0 0 240 90" role="img" aria-label="Tempo ramp chart">
+              <line x1="18" y1="72" x2="224" y2="72" stroke="#8a97a3" stroke-width="1.5" />
+              <line x1="18" y1="16" x2="18" y2="72" stroke="#8a97a3" stroke-width="1.5" />
+              <polyline id="tempoChartLine" points="18,72 224,16" fill="none" stroke="#2a7f8f" stroke-width="4"
+                stroke-linecap="round" stroke-linejoin="round" />
+              <circle id="tempoChartMarker" cx="18" cy="72" r="5" fill="#17191f" />
+            </svg>
+            <div class="tempo-chart-labels">
+              <span id="tempoChartStart">100 BPM</span>
+              <span id="tempoChartDuration">10 min</span>
+              <span id="tempoChartEnd">140 BPM</span>
+            </div>
           </div>
         </section>
 
-        <aside class="controls" aria-label="Metronome settings">
-          <h2 id="tempoSettingsTitle" class="outside-header">Tempo</h2>
-          <section class="control-card" aria-labelledby="tempoSettingsTitle">
-            <div class="control-group" id="constantTempoGroup">
-              <label for="bpmRange">Constant BPM</label>
-              <div class="bpm-row">
-                <input id="bpmRange" type="range" min="40" max="240" value="100">
-                <input id="bpmInput" type="number" min="40" max="240" value="100">
-              </div>
-            </div>
-
-            <div class="control-group">
-              <label for="tempoMode">Mode</label>
-              <select id="tempoMode">
-                <option value="constant" selected>Constant</option>
-                <option value="ramp">Ramp</option>
-                <option value="updown">Up/down</option>
+        <h2 id="measureSettingsTitle" class="outside-header">Measure</h2>
+        <section class="control-card" aria-labelledby="measureSettingsTitle">
+          <div class="section-divider"><span>Time</span></div>
+          <div class="control-group">
+            <label for="timeNumerator">Time Signature</label>
+            <div class="time-signature-row">
+              <input id="timeNumerator" type="number" min="2" max="32" value="4" aria-label="Time signature numerator">
+              <span class="time-divider" aria-hidden="true">/</span>
+              <select id="timeDenominator" aria-label="Time signature denominator">
+                <option value="4" selected>4</option>
+                <option value="8">8</option>
+                <option value="16">16</option>
+                <option value="32">32</option>
               </select>
             </div>
+          </div>
 
-            <div class="control-group" id="tempoTargetGroup">
-              <label id="tempoRangeLabel">BPM</label>
-              <div class="tempo-range-row">
-                <input id="tempoStart" type="number" min="40" max="240" value="100" aria-label="Start BPM">
-                <span>to</span>
-                <input id="tempoTarget" type="number" min="40" max="240" value="140" aria-label="End BPM">
-                <span>in</span>
-                <input id="tempoDuration" type="number" min="1" max="120" step="1" value="10" aria-label="Duration in minutes">
-                <span>min</span>
-              </div>
-            </div>
-
-            <div class="control-group tempo-chart" id="tempoChart">
-              <svg viewBox="0 0 240 90" role="img" aria-label="Tempo ramp chart">
-                <line x1="18" y1="72" x2="224" y2="72" stroke="#8a97a3" stroke-width="1.5"/>
-                <line x1="18" y1="16" x2="18" y2="72" stroke="#8a97a3" stroke-width="1.5"/>
-                <polyline id="tempoChartLine" points="18,72 224,16" fill="none" stroke="#2a7f8f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle id="tempoChartMarker" cx="18" cy="72" r="5" fill="#17191f"/>
-              </svg>
-              <div class="tempo-chart-labels">
-                <span id="tempoChartStart">100 BPM</span>
-                <span id="tempoChartDuration">10 min</span>
-                <span id="tempoChartEnd">140 BPM</span>
-              </div>
-            </div>
-          </section>
-
-          <h2 id="measureSettingsTitle" class="outside-header">Measure</h2>
-          <section class="control-card" aria-labelledby="measureSettingsTitle">
-            <div class="section-divider"><span>Time</span></div>
-            <div class="control-group">
-              <label for="timeNumerator">Time Signature</label>
-              <div class="time-signature-row">
-                <input id="timeNumerator" type="number" min="2" max="32" value="4" aria-label="Time signature numerator">
-                <span class="time-divider" aria-hidden="true">/</span>
-                <select id="timeDenominator" aria-label="Time signature denominator">
-                  <option value="4" selected>4</option>
-                  <option value="8">8</option>
-                  <option value="16">16</option>
-                  <option value="32">32</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="control-group">
-              <label for="tuplet">Tuple</label>
-              <div class="two-column-row">
-                <select id="tuplet" aria-label="Tuple type">
-                  <option value="none" selected>None</option>
-                  <option value="3">3</option>
-                  <option value="5">5</option>
-                  <option value="7">7</option>
-                  <option value="9">9</option>
-                </select>
-                <select id="tupleValue" aria-label="Tuple note value">
-                  <option value="q">Quarter</option>
-                  <option value="8" selected>Eighth</option>
-                  <option value="16">Sixteenth</option>
-                  <option value="32">Thirty-second</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="section-divider"><span>Click</span></div>
-            <div class="control-group">
-              <label for="clickInterval">Interval</label>
-              <select id="clickInterval">
-                <option value="w">Whole</option>
-                <option value="h">Half</option>
+          <div class="control-group">
+            <label for="tuplet">Tuple</label>
+            <div class="two-column-row">
+              <select id="tuplet" aria-label="Tuple type">
+                <option value="none" selected>None</option>
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="7">7</option>
+                <option value="9">9</option>
+              </select>
+              <select id="tupleValue" aria-label="Tuple note value">
                 <option value="q">Quarter</option>
                 <option value="8" selected>Eighth</option>
                 <option value="16">Sixteenth</option>
                 <option value="32">Thirty-second</option>
               </select>
             </div>
+          </div>
 
-            <div class="checkbox-pair">
-              <div class="checkbox-row">
-                <input id="straightGrid" type="checkbox">
-                <label for="straightGrid">Straight grid</label>
-              </div>
-              <div class="checkbox-row">
-                <input id="silentMeasure" type="checkbox">
-                <label for="silentMeasure">Silent</label>
-              </div>
+          <div class="section-divider"><span>Click</span></div>
+          <div class="control-group">
+            <label for="clickInterval">Interval</label>
+            <select id="clickInterval">
+              <option value="w">Whole</option>
+              <option value="h">Half</option>
+              <option value="q">Quarter</option>
+              <option value="8" selected>Eighth</option>
+              <option value="16">Sixteenth</option>
+              <option value="32">Thirty-second</option>
+            </select>
+          </div>
+
+          <div class="checkbox-pair">
+            <div class="checkbox-row">
+              <input id="straightGrid" type="checkbox">
+              <label for="straightGrid">Straight grid</label>
             </div>
-          </section>
-        </aside>
-      </main>
-    </div>
+            <div class="checkbox-row">
+              <input id="silentMeasure" type="checkbox">
+              <label for="silentMeasure">Silent</label>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
 
-    <script src="app.js"></script>
-  </body>
+  <script src="app.js"></script>
+</body>
+
 </html>
