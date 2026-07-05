@@ -20,7 +20,6 @@ const clickInterval = document.querySelector("#clickInterval");
 const tuplet = document.querySelector("#tuplet");
 const tupleValue = document.querySelector("#tupleValue");
 const straightGrid = document.querySelector("#straightGrid");
-const silentMeasure = document.querySelector("#silentMeasure");
 const measureStack = document.querySelector("#measureStack");
 const resetButton = document.querySelector("#resetButton");
 const toggleButton = document.querySelector("#toggleButton");
@@ -383,7 +382,6 @@ function loadSelectedMeasureControls() {
   tupleValue.value = measure.tupleValue;
   clickInterval.value = measure.clickInterval;
   straightGrid.checked = Boolean(measure.straightGrid);
-  silentMeasure.checked = !measure.sound;
   syncTimeSignature();
 }
 
@@ -395,7 +393,6 @@ function saveControlsToSelectedMeasure() {
   measure.tupleValue = tupleValue.value;
   measure.clickInterval = clickInterval.value;
   measure.straightGrid = straightGrid.checked;
-  measure.sound = !silentMeasure.checked;
 }
 
 function syncTimeSignature() {
@@ -733,6 +730,12 @@ function renderMeasureStack() {
                   <strong>Measure ${index + 1}</strong>
                   <span>${describeMeasure(measure)}</span>
                 </button>
+                <button class="mute-toggle" type="button" data-mute-measure="${index}" aria-label="${measure.sound ? 'Mute' : 'Unmute'} measure ${index + 1}" title="${measure.sound ? 'Mute' : 'Unmute'} measure">
+                  ${measure.sound ? 
+                    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>` : 
+                    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>`
+                  }
+                </button>
                 <button class="delete-measure" type="button" data-delete-measure="${index}" ${measures.length === 1 ? "disabled" : ""} aria-label="Delete measure ${index + 1}" title="Delete measure">
                   <svg viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M4 4l8 8"></path>
@@ -764,6 +767,19 @@ function renderMeasureStack() {
 
   measureStack.querySelectorAll("[data-delete-measure]").forEach((button) => {
     button.addEventListener("click", () => deleteMeasure(Number(button.dataset.deleteMeasure)));
+  });
+
+  measureStack.querySelectorAll("[data-mute-measure]").forEach((button) => {
+    button.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const index = Number(button.dataset.muteMeasure);
+      measures[index].sound = !measures[index].sound;
+      saveControlsToSelectedMeasure();
+      renderMeasureStack();
+      if (index === currentMeasureIndex && (isRunning || isPaused)) {
+        restartRunningClock();
+      }
+    });
   });
 
   playheads = [];
@@ -1130,7 +1146,6 @@ tuplet.addEventListener("change", updateRhythm);
 tupleValue.addEventListener("change", updateRhythm);
 clickInterval.addEventListener("change", updateClickInterval);
 straightGrid.addEventListener("change", updateRhythm);
-silentMeasure.addEventListener("change", updateRhythm);
 resetButton.addEventListener("click", resetPlayback);
 toggleButton.addEventListener("click", async () => {
   if (isRunning) {
