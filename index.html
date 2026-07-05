@@ -8,14 +8,17 @@
       :root {
         color-scheme: light;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        --bg: #f5f6f8;
+        --bg: #f4f5f2;
         --panel: #ffffff;
+        --panel-soft: #f8faf8;
         --ink: #17191f;
-        --muted: #68707d;
-        --line: #dfe3ea;
-        --accent: #2471a3;
-        --accent-strong: #155e88;
-        --control: #f0f3f7;
+        --muted: #69717d;
+        --line: #dde3e3;
+        --accent: #2a7f8f;
+        --accent-strong: #176574;
+        --accent-soft: #e8f3f4;
+        --control: #f0f4f4;
+        --danger: #b42318;
       }
 
       * {
@@ -45,45 +48,76 @@
       header {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding: 24px 32px 18px;
+        justify-content: flex-start;
+        min-height: 64px;
+        padding: 0 30px;
         border-bottom: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.82);
+        background: rgba(255, 255, 255, 0.9);
       }
 
       h1 {
         margin: 0;
-        font-size: 1.35rem;
+        font-size: 1.16rem;
         font-weight: 720;
         letter-spacing: 0;
       }
 
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 7px;
+        background: var(--ink);
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 800;
+      }
+
       .tempo-readout {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
+        display: grid;
+        place-items: center;
+        min-width: 156px;
+        gap: 6px;
         font-variant-numeric: tabular-nums;
       }
 
       .tempo-readout strong {
-        font-size: 2rem;
+        display: grid;
+        place-items: center;
+        min-width: 156px;
+        height: 86px;
+        padding: 8px 26px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 10px 28px rgba(23, 25, 31, 0.05);
+        font-size: 4rem;
+        font-weight: 780;
         line-height: 1;
       }
 
       .tempo-readout span {
         color: var(--muted);
-        font-size: 0.95rem;
+        font-size: 0.78rem;
+        font-weight: 720;
+        letter-spacing: 0.04em;
       }
 
       main {
         display: grid;
-        grid-template-columns: minmax(600px, 1fr) 320px;
+        grid-template-columns: minmax(700px, 1fr) 300px;
         gap: 24px;
-        padding: 28px 32px 32px;
+        padding: 24px 30px 30px;
       }
 
-      .notation-area,
-      .controls {
+      .notation-area {
         background: var(--panel);
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -91,15 +125,93 @@
 
       .notation-area {
         display: grid;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: auto auto 1fr auto;
         min-height: 480px;
+        overflow: hidden;
+      }
+
+      .performance-panel {
+        display: grid;
+        justify-items: center;
+        padding: 18px 20px 16px;
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcfb 100%);
+      }
+
+      .transport-row {
+        display: inline-grid;
+        grid-template-columns: 48px 64px;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .transport-panel {
+        display: grid;
+        justify-items: center;
+        gap: 10px;
+        padding: 14px 18px 18px;
+        border-top: 1px solid var(--line);
+        background: #fbfcfb;
+      }
+
+      .transport-button {
+        display: grid;
+        place-items: center;
+        height: 48px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--ink);
+        cursor: pointer;
+      }
+
+      .transport-button svg {
+        width: 22px;
+        height: 22px;
+        fill: currentColor;
+      }
+
+      .transport-button:hover {
+        border-color: var(--accent);
+        color: var(--accent-strong);
+      }
+
+      .play-button {
+        height: 56px;
+        background: var(--ink);
+        color: #fff;
+        border-color: var(--ink);
+      }
+
+      .play-button:hover {
+        background: var(--accent-strong);
+        color: #fff;
+      }
+
+      .pause-icon {
+        display: none;
+      }
+
+      .play-button.is-running .play-icon {
+        display: none;
+      }
+
+      .play-button.is-running .pause-icon {
+        display: block;
+      }
+
+      .status {
+        min-height: 18px;
+        color: var(--muted);
+        font-size: 0.84rem;
+        text-align: center;
       }
 
       .notation-heading {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 18px 20px;
+        padding: 15px 18px;
         border-bottom: 1px solid var(--line);
       }
 
@@ -117,53 +229,49 @@
         display: grid;
         align-content: start;
         align-items: start;
-        gap: 8px;
-        padding: 12px;
+        gap: 10px;
+        padding: 14px 14px 16px;
       }
 
       .measure-row {
-        display: grid;
-        grid-template-columns: 64px 1fr;
-        align-items: center;
-        min-height: 72px;
+        position: relative;
+        display: block;
+        min-height: 96px;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: #fbfcfd;
+        background: var(--panel-soft);
         overflow: hidden;
+        cursor: pointer;
       }
 
       .measure-row.is-selected {
         border-color: var(--accent);
-        box-shadow: 0 0 0 2px rgba(36, 113, 163, 0.14);
+        box-shadow: 0 0 0 2px rgba(42, 127, 143, 0.15);
       }
 
       .measure-row.is-playing {
-        background: #f3f8fb;
+        background: var(--accent-soft);
       }
 
       .measure-meta {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        padding: 6px;
-        border-right: 1px solid var(--line);
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
       }
 
       .measure-select {
-        display: grid;
-        place-items: center;
+        position: absolute;
+        inset: 0;
         border: 0;
         background: transparent;
-        color: var(--ink);
         cursor: pointer;
         padding: 0;
-        text-align: center;
+        pointer-events: auto;
       }
 
       .measure-select strong {
-        font-size: 0.85rem;
+        display: none;
       }
 
       .measure-select span {
@@ -171,16 +279,39 @@
       }
 
       .delete-measure {
-        width: 26px;
-        height: 24px;
+        position: absolute;
+        top: 9px;
+        right: 9px;
+        z-index: 3;
+        display: grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
         border: 1px solid var(--line);
         border-radius: 6px;
-        background: var(--control);
+        background: rgba(255, 255, 255, 0.86);
         color: var(--muted);
         cursor: pointer;
+        pointer-events: auto;
+        opacity: 0.78;
+      }
+
+      .delete-measure svg {
+        width: 15px;
+        height: 15px;
+        stroke: currentColor;
+        stroke-width: 2.4;
+        stroke-linecap: round;
+      }
+
+      .delete-measure:hover {
+        color: var(--danger);
+        border-color: rgba(180, 35, 24, 0.35);
+        opacity: 1;
       }
 
       .delete-measure:disabled {
+        display: none;
         cursor: not-allowed;
         opacity: 0.45;
       }
@@ -188,8 +319,8 @@
       .measure-notation {
         display: grid;
         align-items: center;
-        min-height: 70px;
-        padding: 0 14px;
+        min-height: 94px;
+        padding: 4px 42px 6px;
         place-items: center;
         position: relative;
       }
@@ -200,7 +331,7 @@
       }
 
       .notation-error {
-        color: #b42318;
+        color: var(--danger);
         font-size: 13px;
         line-height: 1.4;
         max-width: 620px;
@@ -208,13 +339,25 @@
       }
 
       .add-measure {
-        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 38px;
         border: 1px dashed var(--accent);
         border-radius: 8px;
-        background: #f6fbfe;
+        background: #f7fbfb;
         color: var(--accent);
         cursor: pointer;
         font-weight: 720;
+      }
+
+      .add-measure svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        stroke-width: 2.5;
+        stroke-linecap: round;
       }
 
       .add-measure:disabled {
@@ -234,18 +377,39 @@
 
       .controls {
         align-self: start;
-        padding: 20px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .control-card {
+        display: grid;
+        gap: 11px;
+        padding: 16px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .control-card h2 {
+        margin: 0;
+        font-size: 0.94rem;
+      }
+
+      .section-title {
+        margin-top: 2px;
+        color: var(--ink);
+        font-size: 0.78rem;
+        font-weight: 760;
       }
 
       .control-group {
         display: grid;
         gap: 8px;
-        margin-bottom: 18px;
       }
 
       label {
         color: var(--muted);
-        font-size: 0.82rem;
+        font-size: 0.76rem;
         font-weight: 650;
         text-transform: uppercase;
       }
@@ -253,12 +417,12 @@
       input,
       select {
         width: 100%;
-        height: 42px;
+        height: 36px;
         border: 1px solid var(--line);
         border-radius: 6px;
         background: var(--control);
         color: var(--ink);
-        padding: 0 12px;
+        padding: 0 10px;
       }
 
       input[type="range"] {
@@ -274,143 +438,252 @@
         align-items: center;
       }
 
+      .tempo-range-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 0.82fr) auto;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .tempo-range-row span {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .tempo-chart {
+        display: none;
+        gap: 8px;
+        margin-top: -4px;
+      }
+
+      .tempo-chart.is-visible {
+        display: grid;
+      }
+
+      .tempo-chart svg {
+        width: 100%;
+        height: 78px;
+        overflow: visible;
+      }
+
+      .tempo-chart-labels {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-variant-numeric: tabular-nums;
+      }
+
       .time-signature-row {
+        display: grid;
+        grid-template-columns: 1fr 20px 1fr;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .time-divider {
+        color: var(--muted);
+        text-align: center;
+        font-weight: 800;
+      }
+
+      .two-column-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 10px;
       }
 
-      .checkbox-row {
+      .checkbox-row,
+      .checkbox-pair {
         display: flex;
         align-items: center;
         gap: 10px;
         min-height: 32px;
       }
 
-      .checkbox-row input {
+      .checkbox-pair {
+        justify-content: space-between;
+      }
+
+      .checkbox-row input,
+      .checkbox-pair input {
         width: 18px;
         height: 18px;
         accent-color: var(--accent);
       }
 
-      .checkbox-row label {
+      .checkbox-row label,
+      .checkbox-pair label {
         margin: 0;
+        text-transform: none;
+        font-size: 0.88rem;
+        color: var(--ink);
       }
 
-      .start-button {
-        width: 100%;
-        height: 52px;
-        margin-top: 4px;
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
         border: 0;
-        border-radius: 7px;
-        background: var(--accent);
-        color: #fff;
-        cursor: pointer;
-        font-weight: 760;
-      }
-
-      .start-button:hover {
-        background: var(--accent-strong);
-      }
-
-      .start-button.is-running {
-        background: #a3342b;
-      }
-
-      .status {
-        min-height: 20px;
-        margin-top: 12px;
-        color: var(--muted);
-        font-size: 0.9rem;
-        text-align: center;
       }
     </style>
   </head>
   <body>
     <div class="app">
       <header>
-        <h1>Metronome</h1>
-        <div class="tempo-readout" aria-live="polite">
-          <strong id="bpmDisplay">100</strong>
-          <span>BPM</span>
+        <div class="brand" aria-label="Metronome brand">
+          <div class="brand-mark" aria-hidden="true">M</div>
+          <h1>Metronome</h1>
         </div>
       </header>
 
       <main>
         <section class="notation-area" aria-labelledby="notationTitle">
+          <div class="performance-panel">
+            <div class="tempo-readout" aria-live="polite">
+              <strong id="bpmDisplay">100</strong>
+              <span>BPM</span>
+            </div>
+          </div>
           <div class="notation-heading">
             <h2 id="notationTitle">Measure Sequence</h2>
             <span id="patternSummary">1 measure</span>
           </div>
           <div id="measureStack" aria-label="Measure sequence"></div>
+          <div class="transport-panel">
+            <div class="transport-row">
+              <button class="transport-button reset-button" id="resetButton" type="button" aria-label="Reset to beginning" title="Reset">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 5h2v14H7z"></path>
+                  <path d="M19 6.5v11L10.5 12z"></path>
+                </svg>
+              </button>
+              <button class="transport-button play-button" id="toggleButton" type="button" aria-label="Play" title="Play">
+                <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 5.5v13l10-6.5z"></path>
+                </svg>
+                <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 5h4v14H7z"></path>
+                  <path d="M13 5h4v14h-4z"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="status" id="status">Ready</div>
+          </div>
         </section>
 
-        <aside class="controls" aria-label="Metronome controls">
-          <div class="control-group">
-            <label for="bpmRange">Tempo</label>
-            <div class="bpm-row">
-              <input id="bpmRange" type="range" min="40" max="240" value="100">
-              <input id="bpmInput" type="number" min="40" max="240" value="100">
+        <aside class="controls" aria-label="Metronome settings">
+          <section class="control-card" aria-labelledby="tempoSettingsTitle">
+            <h2 id="tempoSettingsTitle">Tempo</h2>
+            <div class="control-group" id="constantTempoGroup">
+              <label for="bpmRange">Constant BPM</label>
+              <div class="bpm-row">
+                <input id="bpmRange" type="range" min="40" max="240" value="100">
+                <input id="bpmInput" type="number" min="40" max="240" value="100">
+              </div>
             </div>
-          </div>
 
-          <div class="control-group">
-            <label for="timeNumerator">Time Signature</label>
-            <div class="time-signature-row">
-              <input id="timeNumerator" type="number" min="2" max="32" value="4" aria-label="Time signature numerator">
-              <select id="timeDenominator" aria-label="Time signature denominator">
-                <option value="4" selected>4</option>
-                <option value="8">8</option>
-                <option value="16">16</option>
-                <option value="32">32</option>
+            <div class="control-group">
+              <label for="tempoMode">Mode</label>
+              <select id="tempoMode">
+                <option value="constant" selected>Constant</option>
+                <option value="ramp">Ramp</option>
+                <option value="updown">Up/down</option>
               </select>
             </div>
-          </div>
 
-          <div class="control-group">
-            <label for="tuplet">Tuple Type</label>
-            <select id="tuplet">
-              <option value="none" selected>None</option>
-              <option value="3">Triplets</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label for="tupleValue">Tuple Value</label>
-            <select id="tupleValue">
-              <option value="q">Quarter notes</option>
-              <option value="8" selected>Eighth notes</option>
-              <option value="16">Sixteenth notes</option>
-              <option value="32">Thirty-second notes</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label for="clickInterval">Click Interval</label>
-            <select id="clickInterval">
-              <option value="q">Quarter notes</option>
-              <option value="8" selected>Eighth notes</option>
-              <option value="16">Sixteenth notes</option>
-              <option value="32">Thirty-second notes</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <div class="checkbox-row">
-              <input id="straightGrid" type="checkbox">
-              <label for="straightGrid">Straight grid</label>
+            <div class="control-group" id="tempoTargetGroup">
+              <label id="tempoRangeLabel">BPM</label>
+              <div class="tempo-range-row">
+                <input id="tempoStart" type="number" min="40" max="240" value="100" aria-label="Start BPM">
+                <span>to</span>
+                <input id="tempoTarget" type="number" min="40" max="240" value="140" aria-label="End BPM">
+                <span>in</span>
+                <input id="tempoDuration" type="number" min="1" max="120" step="1" value="10" aria-label="Duration in minutes">
+                <span>min</span>
+              </div>
             </div>
-          </div>
 
-          <div class="control-group">
-            <div class="checkbox-row">
-              <input id="silentMeasure" type="checkbox">
-              <label for="silentMeasure">Silent</label>
+            <div class="control-group tempo-chart" id="tempoChart">
+              <svg viewBox="0 0 240 90" role="img" aria-label="Tempo ramp chart">
+                <line x1="18" y1="72" x2="224" y2="72" stroke="#dfe3ea" stroke-width="1"/>
+                <line x1="18" y1="16" x2="18" y2="72" stroke="#dfe3ea" stroke-width="1"/>
+                <polyline id="tempoChartLine" points="18,72 224,16" fill="none" stroke="#2a7f8f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle id="tempoChartMarker" cx="18" cy="72" r="5" fill="#17191f"/>
+              </svg>
+              <div class="tempo-chart-labels">
+                <span id="tempoChartStart">100 BPM</span>
+                <span id="tempoChartDuration">10 min</span>
+                <span id="tempoChartEnd">140 BPM</span>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <button class="start-button" id="toggleButton" type="button">Start</button>
-          <div class="status" id="status">Ready</div>
+          <section class="control-card" aria-labelledby="measureSettingsTitle">
+            <h2 id="measureSettingsTitle">Measure</h2>
+            <div class="section-title">Time</div>
+            <div class="control-group">
+              <label for="timeNumerator">Time Signature</label>
+              <div class="time-signature-row">
+                <input id="timeNumerator" type="number" min="2" max="32" value="4" aria-label="Time signature numerator">
+                <span class="time-divider" aria-hidden="true">/</span>
+                <select id="timeDenominator" aria-label="Time signature denominator">
+                  <option value="4" selected>4</option>
+                  <option value="8">8</option>
+                  <option value="16">16</option>
+                  <option value="32">32</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label for="tuplet">Tuple</label>
+              <div class="two-column-row">
+                <select id="tuplet" aria-label="Tuple type">
+                  <option value="none" selected>None</option>
+                  <option value="3">3</option>
+                  <option value="5">5</option>
+                  <option value="7">7</option>
+                  <option value="9">9</option>
+                </select>
+                <select id="tupleValue" aria-label="Tuple note value">
+                  <option value="q">Quarter</option>
+                  <option value="8" selected>Eighth</option>
+                  <option value="16">Sixteenth</option>
+                  <option value="32">Thirty-second</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="section-title">Click</div>
+            <div class="control-group">
+              <label for="clickInterval">Interval</label>
+              <select id="clickInterval">
+                <option value="w">Whole</option>
+                <option value="h">Half</option>
+                <option value="q">Quarter</option>
+                <option value="8" selected>Eighth</option>
+                <option value="16">Sixteenth</option>
+                <option value="32">Thirty-second</option>
+              </select>
+            </div>
+
+            <div class="checkbox-pair">
+              <div class="checkbox-row">
+                <input id="straightGrid" type="checkbox">
+                <label for="straightGrid">Straight grid</label>
+              </div>
+              <div class="checkbox-row">
+                <input id="silentMeasure" type="checkbox">
+                <label for="silentMeasure">Silent</label>
+              </div>
+            </div>
+          </section>
         </aside>
       </main>
     </div>
@@ -419,6 +692,19 @@
       const bpmRange = document.querySelector("#bpmRange");
       const bpmInput = document.querySelector("#bpmInput");
       const bpmDisplay = document.querySelector("#bpmDisplay");
+      const constantTempoGroup = document.querySelector("#constantTempoGroup");
+      const tempoMode = document.querySelector("#tempoMode");
+      const tempoStart = document.querySelector("#tempoStart");
+      const tempoTarget = document.querySelector("#tempoTarget");
+      const tempoTargetGroup = document.querySelector("#tempoTargetGroup");
+      const tempoRangeLabel = document.querySelector("#tempoRangeLabel");
+      const tempoDuration = document.querySelector("#tempoDuration");
+      const tempoChart = document.querySelector("#tempoChart");
+      const tempoChartLine = document.querySelector("#tempoChartLine");
+      const tempoChartMarker = document.querySelector("#tempoChartMarker");
+      const tempoChartStart = document.querySelector("#tempoChartStart");
+      const tempoChartDuration = document.querySelector("#tempoChartDuration");
+      const tempoChartEnd = document.querySelector("#tempoChartEnd");
       const timeNumerator = document.querySelector("#timeNumerator");
       const timeDenominator = document.querySelector("#timeDenominator");
       const clickInterval = document.querySelector("#clickInterval");
@@ -428,6 +714,7 @@
       const silentMeasure = document.querySelector("#silentMeasure");
       const measureStack = document.querySelector("#measureStack");
       const patternSummary = document.querySelector("#patternSummary");
+      const resetButton = document.querySelector("#resetButton");
       const toggleButton = document.querySelector("#toggleButton");
       const status = document.querySelector("#status");
 
@@ -437,8 +724,13 @@
       let animationFrame;
       let clickIndex = 0;
       let isRunning = false;
+      let isPaused = false;
       let measureStartTime = 0;
       let nextMeasureTime = 0;
+      let tempoRampStartTime = 0;
+      let pausedTempoElapsed = 0;
+      let pausedMeasureElapsed = 0;
+      let currentTempoBpm = 100;
       let selectedMeasureIndex = 0;
       let currentMeasureIndex = 0;
       let playheads = [];
@@ -456,6 +748,8 @@
       ];
 
       const intervalLabels = {
+        w: "whole notes",
+        h: "half notes",
         q: "quarter notes",
         8: "eighth notes",
         16: "sixteenth notes",
@@ -545,6 +839,59 @@
         return Math.min(240, Math.max(40, Number.parseInt(value, 10) || 100));
       }
 
+      function clampDurationMinutes(value) {
+        return Math.min(120, Math.max(1, Number.parseFloat(value) || 10));
+      }
+
+      function getTempoSettings() {
+        const constantBpm = clampBpm(bpmInput.value);
+        const startBpm = clampBpm(tempoStart.value);
+        const targetBpm = clampBpm(tempoTarget.value);
+        return {
+          mode: tempoMode.value,
+          constantBpm,
+          startBpm,
+          targetBpm,
+          lowBpm: Math.min(startBpm, targetBpm),
+          highBpm: Math.max(startBpm, targetBpm),
+          durationSeconds: clampDurationMinutes(tempoDuration.value) * 60,
+        };
+      }
+
+      function getTempoProgressAtTime(time) {
+        const { mode, durationSeconds } = getTempoSettings();
+        if (mode === "constant") {
+          return 0;
+        }
+
+        const elapsed = isPaused ? pausedTempoElapsed : Math.max(0, time - tempoRampStartTime);
+        if (mode === "ramp") {
+          return Math.min(1, elapsed / durationSeconds);
+        }
+
+        return (elapsed % durationSeconds) / durationSeconds;
+      }
+
+      function getTempoBpmAtTime(time) {
+        const { mode, constantBpm, startBpm, targetBpm, lowBpm, highBpm } = getTempoSettings();
+        const progress = getTempoProgressAtTime(time);
+        if (mode === "constant") {
+          return constantBpm;
+        }
+
+        if (mode === "ramp") {
+          return startBpm + (targetBpm - startBpm) * progress;
+        }
+
+        const triangleProgress = progress <= 0.5 ? progress * 2 : (1 - progress) * 2;
+        return lowBpm + (highBpm - lowBpm) * triangleProgress;
+      }
+
+      function setDisplayedBpm(value) {
+        const bpm = Math.round(value);
+        bpmDisplay.textContent = bpm;
+      }
+
       function clampNumerator(value) {
         return Math.min(32, Math.max(2, Number.parseInt(value, 10) || 4));
       }
@@ -564,7 +911,12 @@
       }
 
       function getIntervalValue(duration) {
-        return duration === "q" ? 4 : Number(duration);
+        const namedValues = {
+          w: 1,
+          h: 2,
+          q: 4,
+        };
+        return namedValues[duration] || Number(duration);
       }
 
       function getMeasureUnits(beats, beatUnit) {
@@ -587,6 +939,8 @@
 
       function getDurationFromUnits(units) {
         const durationsByUnit = {
+          32: "w",
+          16: "h",
           8: "q",
           4: "8",
           2: "16",
@@ -600,7 +954,7 @@
         let currentUnits = startUnits;
         let remainingUnits = Math.round(remainderUnits);
 
-        [8, 4, 2, 1].forEach((units) => {
+        [32, 16, 8, 4, 2, 1].forEach((units) => {
           while (remainingUnits >= units) {
             events.push({
               duration: getDurationFromUnits(units),
@@ -630,21 +984,31 @@
         });
       }
 
-      function getClickEvents(beats, beatUnit, duration, tupletValue) {
+      function getClickEvents(beats, beatUnit, duration, tupletValue, tupleDuration = duration) {
         const measureUnits = getMeasureUnits(beats, beatUnit);
         if (tupletValue) {
-          // Tuple clicks are complete tuplet groups only; partial groups are left silent.
-          const groupUnits = getDurationUnits(duration) * 2;
+          const clickValue = getIntervalValue(duration);
+          const tupleBaseValue = getIntervalValue(tupleDuration);
+          if (clickValue < tupleBaseValue) {
+            return getClickEvents(beats, beatUnit, duration, null);
+          }
+
+          // Tuple-aware clicks are anchored to Tuple Value. Coarser clicks stay straight;
+          // equal/finer clicks land on tuple notes or even subdivisions inside them.
+          const subdivisionsPerTupleNote = clickValue / tupleBaseValue;
+          const groupUnits = getDurationUnits(tupleDuration) * 2;
           const noteUnits = groupUnits / tupletValue;
+          const clickUnits = noteUnits / subdivisionsPerTupleNote;
+          const clicksPerGroup = tupletValue * subdivisionsPerTupleNote;
           const groupCount = Math.floor(measureUnits / groupUnits);
-          return Array.from({ length: groupCount * tupletValue }, (_, index) => {
-            const groupIndex = Math.floor(index / tupletValue);
-            const noteIndex = index % tupletValue;
+          return Array.from({ length: groupCount * clicksPerGroup }, (_, index) => {
+            const groupIndex = Math.floor(index / clicksPerGroup);
+            const clickIndex = index % clicksPerGroup;
             return {
               duration,
-              durationUnits: noteUnits,
+              durationUnits: clickUnits,
               isClick: true,
-              startUnits: groupIndex * groupUnits + noteIndex * noteUnits,
+              startUnits: groupIndex * groupUnits + clickIndex * clickUnits,
             };
           });
         }
@@ -687,7 +1051,7 @@
 
       function isUsableClickInterval(beats, beatUnit, duration, useStraightGrid = straightGrid.checked, tupletValue = getSelectedTuplet()) {
         const clickTupletValue = useStraightGrid ? null : tupletValue;
-        return getClickEvents(beats, beatUnit, duration, clickTupletValue).length > 0;
+        return getClickEvents(beats, beatUnit, duration, clickTupletValue, tupleValue.value).length > 0;
       }
 
       function isUsableTupleValue(beats, beatUnit, duration) {
@@ -724,11 +1088,15 @@
 
       function syncTimeSignature() {
         timeNumerator.value = clampNumerator(timeNumerator.value);
-        straightGrid.disabled = !getSelectedTuplet();
-        if (!getSelectedTuplet()) {
+        const selectedTuplet = getSelectedTuplet();
+        straightGrid.disabled = !selectedTuplet;
+        tupleValue.disabled = !selectedTuplet;
+        if (!selectedTuplet) {
           straightGrid.checked = false;
         }
-        syncTupleValueOptions();
+        if (selectedTuplet) {
+          syncTupleValueOptions();
+        }
         syncClickIntervalOptions();
       }
 
@@ -772,17 +1140,17 @@
 
       function getPattern(measure = getSelectedMeasure()) {
         const { beats, beatUnit } = getTimeSignature(measure);
-        const displayDuration = measure.sound ? measure.tupleValue : null;
         const clickDuration = measure.clickInterval;
         const quarterNotesPerBar = beats * (4 / beatUnit);
         const tupletValue = getSelectedTuplet(measure);
+        const displayDuration = measure.sound ? (tupletValue ? measure.tupleValue : clickDuration) : null;
         // Display and click grids are intentionally independent. By default tuple measures
         // click the written tuple grid; Straight grid is the rarer nominal-grid override.
         const events = measure.sound
           ? getDisplayEvents(beats, beatUnit, displayDuration, tupletValue)
           : getSilentEvents(beats, beatUnit);
         const clickEvents = measure.sound
-          ? getClickEvents(beats, beatUnit, clickDuration, measure.straightGrid ? null : tupletValue)
+          ? getClickEvents(beats, beatUnit, clickDuration, measure.straightGrid ? null : tupletValue, measure.tupleValue)
           : [];
         const clickCount = clickEvents.length;
         return {
@@ -802,12 +1170,12 @@
 
       function getMeasureSeconds(measure = measures[currentMeasureIndex]) {
         const pattern = getPattern(measure);
-        const secondsPerQuarter = 60 / Number(bpmInput.value);
+        const secondsPerQuarter = 60 / currentTempoBpm;
         return pattern.quarterNotesPerBar * secondsPerQuarter;
       }
 
       function getBeamGroupSize(pattern) {
-        if (pattern.duration === "q") {
+        if (["w", "h", "q"].includes(pattern.duration)) {
           return 1;
         }
 
@@ -863,7 +1231,7 @@
         const bar = container.querySelector(".playhead-bar");
         playheads[measureIndex] = bar ? { bar, startX, endX } : null;
 
-        if (playheads[measureIndex] && isRunning && measureIndex === currentMeasureIndex) {
+        if (playheads[measureIndex] && (isRunning || isPaused) && measureIndex === currentMeasureIndex) {
           playheads[measureIndex].bar.classList.add("is-running");
           updatePlayhead();
         }
@@ -899,9 +1267,9 @@
         const bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         bar.setAttribute("class", "playhead-bar");
         bar.setAttribute("x", String(startX - 9));
-        bar.setAttribute("y", "4");
+        bar.setAttribute("y", "8");
         bar.setAttribute("width", "18");
-        bar.setAttribute("height", "72");
+        bar.setAttribute("height", "80");
         bar.setAttribute("rx", "4");
         bar.setAttribute("fill", "#2471a3");
         bar.setAttribute("fill-opacity", "0.22");
@@ -978,6 +1346,8 @@
           if (typeof stave.setWidth === "function") {
             stave.setWidth(staveWidth);
           }
+          const renderWidth = Math.ceil(staveWidth + 72);
+          renderer.resize(renderWidth, 92);
           stave.draw();
           voice.draw(context, stave);
 
@@ -989,6 +1359,13 @@
             console.warn(decorationError);
           }
 
+          const svg = container.querySelector("svg");
+          if (svg) {
+            svg.setAttribute("width", String(renderWidth));
+            svg.setAttribute("height", "92");
+            svg.setAttribute("viewBox", `0 0 ${renderWidth} 92`);
+          }
+
           addPlayheadToRenderedSvg(container, tickables, measureIndex, stave.getNoteStartX(), notationSpan.endX);
         } catch (error) {
           console.error(error);
@@ -997,7 +1374,7 @@
       }
 
       function describeMeasure(measure) {
-        const tupleText = measure.tupleType ? `${measure.tupleType}:${intervalLabels[measure.tupleValue]}` : intervalLabels[measure.tupleValue];
+          const tupleText = measure.tupleType ? `${measure.tupleType}:${intervalLabels[measure.tupleValue]}` : intervalLabels[measure.clickInterval];
         return measure.sound ? `${measure.beats}/${measure.beatUnit}, ${tupleText}` : `${measure.beats}/${measure.beatUnit}, silent`;
       }
 
@@ -1012,11 +1389,16 @@
           return `
             <section class="measure-row${isSelected}${isPlaying}" data-measure-index="${index}">
               <div class="measure-meta">
-                <button class="measure-select" type="button" data-select-measure="${index}">
+                <button class="measure-select" type="button" data-select-measure="${index}" aria-label="Select measure ${index + 1}">
                   <strong>Measure ${index + 1}</strong>
                   <span>${describeMeasure(measure)}</span>
                 </button>
-                <button class="delete-measure" type="button" data-delete-measure="${index}" ${measures.length === 1 ? "disabled" : ""} aria-label="Delete measure ${index + 1}">x</button>
+                <button class="delete-measure" type="button" data-delete-measure="${index}" ${measures.length === 1 ? "disabled" : ""} aria-label="Delete measure ${index + 1}" title="Delete measure">
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M4 4l8 8"></path>
+                    <path d="M12 4l-8 8"></path>
+                  </svg>
+                </button>
               </div>
               <div class="measure-notation" data-notation-index="${index}" aria-label="Measure ${index + 1} notation"></div>
             </section>
@@ -1026,7 +1408,13 @@
         const addButton = document.createElement("button");
         addButton.className = "add-measure";
         addButton.type = "button";
-        addButton.textContent = "+ Add measure";
+        addButton.innerHTML = `
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 3v10"></path>
+            <path d="M3 8h10"></path>
+          </svg>
+          <span>Add measure</span>
+        `;
         addButton.disabled = measures.length >= maxMeasures;
         addButton.addEventListener("click", addMeasure);
         measureStack.appendChild(addButton);
@@ -1046,15 +1434,16 @@
       }
 
       function updateActiveMeasureClasses() {
+        const isTransportActive = isRunning || isPaused;
         measureStack.querySelectorAll("[data-measure-index]").forEach((row) => {
           const index = Number(row.dataset.measureIndex);
           row.classList.toggle("is-selected", index === selectedMeasureIndex);
-          row.classList.toggle("is-playing", isRunning && index === currentMeasureIndex);
+          row.classList.toggle("is-playing", isTransportActive && index === currentMeasureIndex);
         });
 
         playheads.forEach((entry, index) => {
           if (entry) {
-            entry.bar.classList.toggle("is-running", isRunning && index === currentMeasureIndex);
+            entry.bar.classList.toggle("is-running", isTransportActive && index === currentMeasureIndex);
           }
         });
       }
@@ -1097,7 +1486,88 @@
         const bpm = clampBpm(value);
         bpmRange.value = bpm;
         bpmInput.value = bpm;
-        bpmDisplay.textContent = bpm;
+        if (!isRunning || tempoMode.value === "constant") {
+          currentTempoBpm = bpm;
+          setDisplayedBpm(currentTempoBpm);
+        }
+        updateTempoControls();
+      }
+
+      function syncTempoStart(value) {
+        tempoStart.value = clampBpm(value);
+        updateTempoControls();
+      }
+
+      function syncTempoTarget(value) {
+        tempoTarget.value = clampBpm(value);
+        updateTempoControls();
+      }
+
+      function syncTempoDuration(value) {
+        tempoDuration.value = clampDurationMinutes(value);
+        updateTempoControls();
+      }
+
+      function updateTempoControls() {
+        const { mode, startBpm, targetBpm, lowBpm, durationSeconds } = getTempoSettings();
+        const usesRamp = mode !== "constant";
+        constantTempoGroup.style.display = usesRamp ? "none" : "";
+        tempoTargetGroup.style.display = usesRamp ? "" : "none";
+        tempoChart.classList.toggle("is-visible", usesRamp);
+        tempoRangeLabel.textContent = mode === "updown" ? "Low / high BPM" : "BPM";
+
+        if (mode === "updown") {
+          tempoChartLine.setAttribute("points", "18,72 121,16 224,72");
+          tempoChartStart.textContent = `${lowBpm} BPM`;
+          tempoChartEnd.textContent = `${lowBpm} BPM`;
+        } else {
+          tempoChartLine.setAttribute("points", startBpm <= targetBpm ? "18,72 224,16" : "18,16 224,72");
+          tempoChartStart.textContent = `${startBpm} BPM`;
+          tempoChartEnd.textContent = `${targetBpm} BPM`;
+        }
+
+        tempoChartDuration.textContent = `${Math.round(durationSeconds / 60)} min`;
+        updateTempoMarker();
+      }
+
+      function updateTempoMarker() {
+        const { mode, startBpm, targetBpm } = getTempoSettings();
+        if (mode === "constant") {
+          return;
+        }
+
+        const markerTime = audioContext && (isRunning || isPaused) ? audioContext.currentTime : 0;
+        if (isRunning) {
+          setDisplayedBpm(getTempoBpmAtTime(markerTime));
+        }
+
+        const progress = audioContext ? getTempoProgressAtTime(markerTime) : 0;
+        const x = 18 + 206 * progress;
+        let y;
+        if (mode === "updown") {
+          y = progress <= 0.5 ? 72 - 56 * (progress * 2) : 16 + 56 * ((progress - 0.5) * 2);
+        } else {
+          const yStart = startBpm <= targetBpm ? 72 : 16;
+          const yEnd = startBpm <= targetBpm ? 16 : 72;
+          y = yStart + (yEnd - yStart) * progress;
+        }
+
+        tempoChartMarker.setAttribute("cx", String(x));
+        tempoChartMarker.setAttribute("cy", String(y));
+      }
+
+      function getClickIndexForMeasureElapsed(measure, elapsedSeconds) {
+        const pattern = getPattern(measure);
+        const measureSeconds = getMeasureSeconds(measure);
+        const secondsPerUnit = measureSeconds / pattern.measureUnits;
+        const nextIndex = pattern.clickEvents.findIndex((event) => event.startUnits * secondsPerUnit > elapsedSeconds);
+        return nextIndex === -1 ? pattern.clickEvents.length : nextIndex;
+      }
+
+      function setTransportButtonState() {
+        toggleButton.setAttribute("aria-label", isRunning ? "Pause" : "Play");
+        toggleButton.title = isRunning ? "Pause" : "Play";
+        toggleButton.classList.toggle("is-running", isRunning);
       }
 
       function restartRunningClock() {
@@ -1108,6 +1578,8 @@
         currentMeasureIndex = Math.min(currentMeasureIndex, measures.length - 1);
         clickIndex = 0;
         measureStartTime = audioContext.currentTime + 0.06;
+        currentTempoBpm = getTempoBpmAtTime(measureStartTime);
+        setDisplayedBpm(currentTempoBpm);
         nextMeasureTime = measureStartTime + getMeasureSeconds(measures[currentMeasureIndex]);
         updateActiveMeasureClasses();
         updatePlayhead();
@@ -1141,6 +1613,7 @@
 
       function animatePlayhead() {
         updatePlayhead();
+        updateTempoMarker();
         animationFrame = window.requestAnimationFrame(animatePlayhead);
       }
 
@@ -1191,23 +1664,40 @@
 
         currentMeasureIndex = (currentMeasureIndex + 1) % measures.length;
         measureStartTime = startTime;
+        currentTempoBpm = getTempoBpmAtTime(startTime);
+        setDisplayedBpm(currentTempoBpm);
         nextMeasureTime = measureStartTime + getMeasureSeconds(measures[currentMeasureIndex]);
         clickIndex = 0;
         updateActiveMeasureClasses();
       }
 
-      async function start() {
+      async function play() {
         audioContext = audioContext || new AudioContext();
         await audioContext.resume();
         saveControlsToSelectedMeasure();
-        renderMeasureStack();
+        const resuming = isPaused;
+        if (!resuming) {
+          renderMeasureStack();
+        }
         isRunning = true;
-        currentMeasureIndex = 0;
-        clickIndex = 0;
-        measureStartTime = audioContext.currentTime + 0.06;
+
+        if (resuming) {
+          isPaused = false;
+          measureStartTime = audioContext.currentTime - pausedMeasureElapsed;
+          tempoRampStartTime = audioContext.currentTime - pausedTempoElapsed;
+          currentTempoBpm = getTempoBpmAtTime(audioContext.currentTime);
+          clickIndex = getClickIndexForMeasureElapsed(measures[currentMeasureIndex], pausedMeasureElapsed);
+        } else {
+          currentMeasureIndex = 0;
+          clickIndex = 0;
+          measureStartTime = audioContext.currentTime + 0.06;
+          tempoRampStartTime = measureStartTime;
+          currentTempoBpm = getTempoBpmAtTime(measureStartTime);
+        }
+
+        setDisplayedBpm(currentTempoBpm);
         nextMeasureTime = measureStartTime + getMeasureSeconds(measures[currentMeasureIndex]);
-        toggleButton.textContent = "Stop";
-        toggleButton.classList.add("is-running");
+        setTransportButtonState();
         status.textContent = "Playing";
         updateActiveMeasureClasses();
         updatePlayhead();
@@ -1215,19 +1705,46 @@
         animationFrame = window.requestAnimationFrame(animatePlayhead);
       }
 
-      function stop() {
+      function pause() {
+        if (!isRunning || !audioContext) {
+          return;
+        }
+
+        pausedMeasureElapsed = Math.max(0, audioContext.currentTime - measureStartTime);
+        pausedTempoElapsed = Math.max(0, audioContext.currentTime - tempoRampStartTime);
         isRunning = false;
+        isPaused = true;
         window.clearInterval(schedulerTimer);
         window.cancelAnimationFrame(animationFrame);
-        playheads.forEach((entry) => {
+        setTransportButtonState();
+        status.textContent = "Paused";
+        updateActiveMeasureClasses();
+        updateTempoMarker();
+      }
+
+      function resetPlayback() {
+        isRunning = false;
+        isPaused = false;
+        window.clearInterval(schedulerTimer);
+        window.cancelAnimationFrame(animationFrame);
+        currentMeasureIndex = 0;
+        clickIndex = 0;
+        pausedMeasureElapsed = 0;
+        pausedTempoElapsed = 0;
+        tempoRampStartTime = 0;
+        measureStartTime = 0;
+        nextMeasureTime = 0;
+        currentTempoBpm = getTempoBpmAtTime(0);
+        setDisplayedBpm(currentTempoBpm);
+        playheads.forEach((entry, index) => {
           if (entry) {
             entry.bar.classList.remove("is-running");
             entry.bar.setAttribute("x", String(entry.startX - 9));
           }
         });
-        toggleButton.textContent = "Start";
-        toggleButton.classList.remove("is-running");
+        setTransportButtonState();
         status.textContent = "Ready";
+        updateTempoMarker();
         updateActiveMeasureClasses();
       }
 
@@ -1240,17 +1757,34 @@
       }
 
       function updateClickInterval() {
-        tupleValue.value = clickInterval.value;
         updateRhythm();
+      }
+
+      function updateTempoSettings() {
+        updateTempoControls();
+        resetPlayback();
       }
 
       bpmRange.addEventListener("input", (event) => {
         syncBpm(event.target.value);
-        restartRunningClock();
+        updateTempoSettings();
       });
       bpmInput.addEventListener("input", (event) => {
         syncBpm(event.target.value);
-        restartRunningClock();
+        updateTempoSettings();
+      });
+      tempoMode.addEventListener("change", updateTempoSettings);
+      tempoStart.addEventListener("input", (event) => {
+        syncTempoStart(event.target.value);
+        updateTempoSettings();
+      });
+      tempoTarget.addEventListener("input", (event) => {
+        syncTempoTarget(event.target.value);
+        updateTempoSettings();
+      });
+      tempoDuration.addEventListener("input", (event) => {
+        syncTempoDuration(event.target.value);
+        updateTempoSettings();
       });
       timeNumerator.addEventListener("input", updateRhythm);
       timeDenominator.addEventListener("change", updateRhythm);
@@ -1259,15 +1793,16 @@
       clickInterval.addEventListener("change", updateClickInterval);
       straightGrid.addEventListener("change", updateRhythm);
       silentMeasure.addEventListener("change", updateRhythm);
+      resetButton.addEventListener("click", resetPlayback);
       toggleButton.addEventListener("click", async () => {
         if (isRunning) {
-          stop();
+          pause();
         } else {
           try {
-            await start();
+            await play();
           } catch (error) {
             console.error(error);
-            stop();
+            resetPlayback();
             status.textContent = "Audio could not start";
           }
         }
