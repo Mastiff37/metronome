@@ -1243,19 +1243,31 @@
           .filter(Number.isFinite);
       }
 
-      function getNotationSpan(tickables, defaultStartX = 126, defaultEndX = 710) {
+      function getNotationSpan(tickables, defaultStartX = 126, defaultEndX = 710, pattern = null) {
         const tickableXs = getTickableXs(tickables);
         const startX = tickableXs[0] || defaultStartX;
         const lastX = tickableXs[tickableXs.length - 1];
         const previousX = tickableXs[tickableXs.length - 2];
-        // The measure ends one displayed subdivision after the final visible note/rest.
-        // The staff extends farther than this, but the playhead uses this exact endpoint.
-        const finalStep = Number.isFinite(lastX) && Number.isFinite(previousX) ? lastX - previousX : 56;
+        
+        let finalStep = Number.isFinite(lastX) && Number.isFinite(previousX) ? lastX - previousX : 56;
+        
+        if (pattern && pattern.events.length >= 2 && tickables.length === pattern.events.length) {
+          const lastEvent = pattern.events[pattern.events.length - 1];
+          const previousEvent = pattern.events[pattern.events.length - 2];
+          
+          const previousDurationUnits = lastEvent.startUnits - previousEvent.startUnits;
+          const lastDurationUnits = pattern.measureUnits - lastEvent.startUnits;
+          
+          if (previousDurationUnits > 0 && lastDurationUnits > 0) {
+            finalStep = finalStep * (lastDurationUnits / previousDurationUnits);
+          }
+        }
+
         const endX = Number.isFinite(lastX) ? lastX + finalStep : defaultEndX;
         return { startX, endX, finalStep };
       }
 
-      function addPlayheadToRenderedSvg(container, tickables, measureIndex, defaultStartX = 126, defaultEndX = 710) {
+      function addPlayheadToRenderedSvg(container, tickables, measureIndex, defaultStartX = 126, defaultEndX = 710, pattern = null) {
         const svg = container.querySelector("svg");
 
         if (!svg) {
@@ -1263,7 +1275,7 @@
           return;
         }
 
-        const { startX, endX } = getNotationSpan(tickables, defaultStartX, defaultEndX);
+        const { startX, endX } = getNotationSpan(tickables, defaultStartX, defaultEndX, pattern);
         const bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         bar.setAttribute("class", "playhead-bar");
         bar.setAttribute("x", String(startX - 9));
@@ -1339,7 +1351,7 @@
 
           voice.addTickables(tickables);
           new VF.Formatter().joinVoices([voice]).format([voice], 470);
-          const notationSpan = getNotationSpan(tickables, stave.getNoteStartX(), 710);
+          const notationSpan = getNotationSpan(tickables, stave.getNoteStartX(), 710, pattern);
           // Keep the visual staff roomy without changing the playhead/audio measure length.
           const staveEndX = notationSpan.endX + notationSpan.finalStep + 52;
           const staveWidth = Math.max(220, staveEndX - 36);
@@ -1366,7 +1378,7 @@
             svg.setAttribute("viewBox", `0 0 ${renderWidth} 92`);
           }
 
-          addPlayheadToRenderedSvg(container, tickables, measureIndex, stave.getNoteStartX(), notationSpan.endX);
+          addPlayheadToRenderedSvg(container, tickables, measureIndex, stave.getNoteStartX(), notationSpan.endX, pattern);
         } catch (error) {
           console.error(error);
           renderNotationError(container, measureIndex, error);
