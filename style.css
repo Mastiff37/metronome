@@ -487,7 +487,7 @@ label {
 input,
 select {
   width: 100%;
-  height: 36px;
+  height: 30px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--control);
@@ -627,7 +627,8 @@ input[type="range"] {
 .checkbox-pair label {
   margin: 0;
   text-transform: none;
-  font-size: 0.88rem;
+  font-size: 0.76rem;
+  font-weight: 650;
   color: var(--ink);
 }
 
@@ -653,6 +654,8 @@ input[type="range"] {
 .subtle-right-row label {
   text-transform: none;
   margin: 0;
+  font-size: 0.76rem;
+  font-weight: 650;
 }
 
 .subtle-right-row select {
