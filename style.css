@@ -643,4 +643,22 @@ input[type="range"] {
   border: 0;
 }
 
-</style>
+.subtle-right-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.subtle-right-row label {
+  text-transform: none;
+  margin: 0;
+}
+
+.subtle-right-row select {
+  width: 80px;
+}
+
+.justify-right {
+  justify-content: flex-end;
+}
