@@ -141,14 +141,14 @@
           <div class="section-divider"><span>Click</span></div>
           <div class="control-group">
             <label for="clickInterval">Interval</label>
-            <select id="clickInterval">
-              <option value="w">Whole</option>
-              <option value="h">Half</option>
-              <option value="q">Quarter</option>
-              <option value="8" selected>Eighth</option>
-              <option value="16">Sixteenth</option>
-              <option value="32">Thirty-second</option>
-            </select>
+            <div class="interval-options" id="clickIntervalOptions">
+              <button type="button" class="interval-btn" data-value="w" aria-label="Whole"></button>
+              <button type="button" class="interval-btn" data-value="h" aria-label="Half"></button>
+              <button type="button" class="interval-btn" data-value="q" aria-label="Quarter"></button>
+              <button type="button" class="interval-btn is-active" data-value="8" aria-label="Eighth"></button>
+              <button type="button" class="interval-btn" data-value="16" aria-label="Sixteenth"></button>
+              <button type="button" class="interval-btn" data-value="32" aria-label="Thirty-second"></button>
+            </div>
           </div>
 
           <div class="checkbox-row">
