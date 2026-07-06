@@ -28,8 +28,19 @@ const clickInterval = {
     });
   }
 };
+const displayDurationOptions = document.querySelector("#displayDurationOptions");
+const displayDuration = {
+  get value() {
+    const active = displayDurationOptions.querySelector(".is-active");
+    return active ? active.dataset.value : "8";
+  },
+  set value(v) {
+    displayDurationOptions.querySelectorAll(".interval-btn").forEach(btn => {
+      btn.classList.toggle("is-active", btn.dataset.value === String(v));
+    });
+  }
+};
 const tuplet = document.querySelector("#tuplet");
-const tupleValue = document.querySelector("#tupleValue");
 const straightGrid = document.querySelector("#straightGrid");
 const measureStack = document.querySelector("#measureStack");
 const resetButton = document.querySelector("#resetButton");
@@ -58,7 +69,7 @@ let measures = [
     beats: 4,
     beatUnit: 4,
     tupleType: null,
-    tupleValue: "8",
+    displayDuration: "8",
     clickInterval: "8",
     straightGrid: false,
     sound: true,
@@ -373,10 +384,10 @@ function getDisplayEvents(beats, beatUnit, duration, tupletValue) {
 
 function isUsableClickInterval(beats, beatUnit, duration, useStraightGrid = straightGrid.checked, tupletValue = getSelectedTuplet()) {
   const clickTupletValue = useStraightGrid ? null : tupletValue;
-  return getClickEvents(beats, beatUnit, duration, clickTupletValue, tupleValue.value).length > 0;
+  return getClickEvents(beats, beatUnit, duration, clickTupletValue, displayDuration.value).length > 0;
 }
 
-function isUsableTupleValue(beats, beatUnit, duration) {
+function isUsableDisplayDuration(beats, beatUnit, duration) {
   const events = getDisplayEvents(beats, beatUnit, duration, getSelectedTuplet());
   return events.some((event) => event.isNote) && events.length <= maxDisplayedNotes;
 }
@@ -390,7 +401,16 @@ function loadSelectedMeasureControls() {
   timeNumerator.value = measure.beats;
   timeDenominator.value = measure.beatUnit;
   tuplet.value = measure.tupleType || "none";
-  tupleValue.value = measure.tupleValue;
+  
+  if (measure.displayDuration) {
+    displayDuration.value = measure.displayDuration;
+  } else if (measure.tupleValue) {
+    displayDuration.value = measure.tupleValue;
+    measure.displayDuration = measure.tupleValue;
+  } else {
+    displayDuration.value = measure.clickInterval || "8";
+  }
+  
   clickInterval.value = measure.clickInterval;
   straightGrid.checked = Boolean(measure.straightGrid);
   syncTimeSignature();
@@ -401,7 +421,7 @@ function saveControlsToSelectedMeasure() {
   measure.beats = clampNumerator(timeNumerator.value);
   measure.beatUnit = Number(timeDenominator.value);
   measure.tupleType = getSelectedTuplet();
-  measure.tupleValue = tupleValue.value;
+  measure.displayDuration = displayDuration.value;
   measure.clickInterval = clickInterval.value;
   measure.straightGrid = straightGrid.checked;
 }
@@ -410,42 +430,21 @@ function syncTimeSignature() {
   timeNumerator.value = clampNumerator(timeNumerator.value);
   const selectedTuplet = getSelectedTuplet();
   straightGrid.disabled = !selectedTuplet;
-  tupleValue.disabled = !selectedTuplet;
   if (!selectedTuplet) {
     straightGrid.checked = false;
   }
-  if (selectedTuplet) {
-    syncTupleValueOptions();
-  }
-  syncClickIntervalOptions();
+  syncRhythmOptions();
+  syncTempoTarget();
+  syncTempoDuration();
 }
 
-function syncTupleValueOptions() {
+function syncIntervalButtons(container, valueObj, validationFn) {
   const { beats, beatUnit } = getTimeSignature();
-  const options = Array.from(tupleValue.options);
+  const options = Array.from(container.querySelectorAll(".interval-btn"));
   let selectedIsValid = false;
 
   options.forEach((option) => {
-    const isValid = isUsableTupleValue(beats, beatUnit, option.value);
-    option.disabled = !isValid;
-    selectedIsValid = selectedIsValid || (option.selected && isValid);
-  });
-
-  if (!selectedIsValid) {
-    const firstValidOption = options.find((option) => !option.disabled);
-    if (firstValidOption) {
-      tupleValue.value = firstValidOption.value;
-    }
-  }
-}
-
-function syncClickIntervalOptions() {
-  const { beats, beatUnit } = getTimeSignature();
-  const options = Array.from(clickIntervalOptions.querySelectorAll(".interval-btn"));
-  let selectedIsValid = false;
-
-  options.forEach((option) => {
-    const isValid = isUsableClickInterval(beats, beatUnit, option.dataset.value);
+    const isValid = validationFn(beats, beatUnit, option.dataset.value);
     option.disabled = !isValid;
     selectedIsValid = selectedIsValid || (option.classList.contains("is-active") && isValid);
   });
@@ -453,9 +452,14 @@ function syncClickIntervalOptions() {
   if (!selectedIsValid) {
     const firstValidOption = options.find((option) => !option.disabled);
     if (firstValidOption) {
-      clickInterval.value = firstValidOption.dataset.value;
+      valueObj.value = firstValidOption.dataset.value;
     }
   }
+}
+
+function syncRhythmOptions() {
+  syncIntervalButtons(displayDurationOptions, displayDuration, isUsableDisplayDuration);
+  syncIntervalButtons(clickIntervalOptions, clickInterval, isUsableClickInterval);
 }
 
 function getPattern(measure = getSelectedMeasure()) {
@@ -463,14 +467,13 @@ function getPattern(measure = getSelectedMeasure()) {
   const clickDuration = measure.clickInterval;
   const quarterNotesPerBar = beats * (4 / beatUnit);
   const tupletValue = getSelectedTuplet(measure);
-  const displayDuration = measure.sound ? (tupletValue ? measure.tupleValue : clickDuration) : null;
-  // Display and click grids are intentionally independent. By default tuple measures
-  // click the written tuple grid; Straight grid is the rarer nominal-grid override.
+  const displayDuration = measure.sound ? (measure.displayDuration || measure.tupleValue || clickDuration) : null;
+  
   const events = measure.sound
     ? getDisplayEvents(beats, beatUnit, displayDuration, tupletValue)
     : getSilentEvents(beats, beatUnit);
   const clickEvents = measure.sound
-    ? getClickEvents(beats, beatUnit, clickDuration, measure.straightGrid ? null : tupletValue, measure.tupleValue)
+    ? getClickEvents(beats, beatUnit, clickDuration, measure.straightGrid ? null : tupletValue, displayDuration)
     : [];
   const clickCount = clickEvents.length;
   return {
@@ -726,7 +729,8 @@ function renderNotation(measureIndex) {
 }
 
 function describeMeasure(measure) {
-  const tupleText = measure.tupleType ? `${measure.tupleType}:${intervalLabels[measure.tupleValue]}` : intervalLabels[measure.clickInterval];
+  const displayVal = measure.displayDuration || measure.tupleValue || measure.clickInterval;
+  const tupleText = measure.tupleType ? `${measure.tupleType}:${intervalLabels[displayVal]}` : intervalLabels[displayVal];
   return measure.sound ? `${measure.beats}/${measure.beatUnit}, ${tupleText}` : `${measure.beats}/${measure.beatUnit}, silent`;
 }
 
@@ -1154,7 +1158,6 @@ tempoDuration.addEventListener("input", (event) => {
 timeNumerator.addEventListener("input", updateRhythm);
 timeDenominator.addEventListener("change", updateRhythm);
 tuplet.addEventListener("change", updateRhythm);
-tupleValue.addEventListener("change", updateRhythm);
 straightGrid.addEventListener("change", updateRhythm);
 resetButton.addEventListener("click", resetPlayback);
 toggleButton.addEventListener("click", async () => {
@@ -1175,38 +1178,44 @@ function renderIntervalIcons() {
   const VF = getVexFlow();
   if (!VF) return;
 
-  const buttons = clickIntervalOptions.querySelectorAll(".interval-btn");
-  buttons.forEach(btn => {
-    const duration = btn.dataset.value;
-    const renderer = new VF.Renderer(btn, VF.Renderer.Backends.SVG);
-    renderer.resize(60, 80);
-    const context = renderer.getContext();
-    
-    const note = new VF.StaveNote({
-      keys: ["b/4"],
-      duration: duration,
-      stem_direction: duration === "w" ? undefined : 1
-    });
-    
-    const stave = new VF.Stave(5, 5, 50);
-    stave.setContext(context);
-    
-    const voice = new VF.Voice({ num_beats: 1, beat_value: 4 }).setStrict(false);
-    voice.addTickables([note]);
-    new VF.Formatter().joinVoices([voice]).format([voice], 50);
-    voice.draw(context, stave);
-    
-    const svg = btn.querySelector("svg");
-    svg.setAttribute("viewBox", "0 14 60 80");
-    svg.style.width = "100%";
-    svg.style.height = "100%";
-    
-    // Add click listener to the button
-    btn.addEventListener("click", () => {
-      if (!btn.disabled) {
-        clickInterval.value = duration;
-        updateClickInterval();
-      }
+  document.querySelectorAll(".interval-options").forEach(container => {
+    const buttons = container.querySelectorAll(".interval-btn");
+    buttons.forEach(btn => {
+      const duration = btn.dataset.value;
+      const renderer = new VF.Renderer(btn, VF.Renderer.Backends.SVG);
+      renderer.resize(60, 80);
+      const context = renderer.getContext();
+      
+      const note = new VF.StaveNote({
+        keys: ["b/4"],
+        duration: duration,
+        stem_direction: duration === "w" ? undefined : 1
+      });
+      
+      const stave = new VF.Stave(5, 5, 50);
+      stave.setContext(context);
+      
+      const voice = new VF.Voice({ num_beats: 1, beat_value: 4 }).setStrict(false);
+      voice.addTickables([note]);
+      new VF.Formatter().joinVoices([voice]).format([voice], 50);
+      voice.draw(context, stave);
+      
+      const svg = btn.querySelector("svg");
+      svg.setAttribute("viewBox", "0 14 60 80");
+      svg.style.width = "100%";
+      svg.style.height = "100%";
+      
+      btn.addEventListener("click", () => {
+        if (!btn.disabled) {
+          if (container.id === "displayDurationOptions") {
+            displayDuration.value = duration;
+            updateRhythm();
+          } else {
+            clickInterval.value = duration;
+            updateClickInterval();
+          }
+        }
+      });
     });
   });
 }
