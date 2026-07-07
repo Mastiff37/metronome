@@ -855,7 +855,7 @@ function syncBpm(value) {
   const bpm = clampBpm(value);
   bpmRange.value = bpm;
   bpmInput.value = bpm;
-  if (!isRunning || tempoMode.value === "constant") {
+  if (!isRunning) {
     currentTempoBpm = bpm;
     setDisplayedBpm(currentTempoBpm);
   }
@@ -1131,7 +1131,10 @@ function updateClickInterval() {
 
 function updateTempoSettings() {
   updateTempoControls();
-  resetPlayback();
+  if (!isRunning) {
+    currentTempoBpm = getTempoBpmAtTime(0);
+    setDisplayedBpm(currentTempoBpm);
+  }
 }
 
 bpmRange.addEventListener("input", (event) => {
