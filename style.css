@@ -57,9 +57,7 @@ header {
   justify-content: flex-start;
   min-height: 64px;
   padding: 0 30px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--ink);
+  color: var(--text-light);
 }
 
 h1 {
@@ -76,15 +74,10 @@ h1 {
 }
 
 .brand-mark {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 7px;
-  background: var(--ink);
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 800;
+  display: block;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
 }
 
 main {
