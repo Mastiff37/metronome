@@ -41,6 +41,7 @@ const displayDuration = {
   }
 };
 const tuplet = document.querySelector("#tuplet");
+const rudiment = document.querySelector("#rudiment");
 const straightGrid = document.querySelector("#straightGrid");
 const measureStack = document.querySelector("#measureStack");
 const resetButton = document.querySelector("#resetButton");
@@ -69,6 +70,7 @@ let measures = [
     beats: 4,
     beatUnit: 4,
     tupleType: null,
+    rudimentId: "none",
     displayDuration: "8",
     clickInterval: "8",
     straightGrid: false,
@@ -401,6 +403,7 @@ function loadSelectedMeasureControls() {
   timeNumerator.value = measure.beats;
   timeDenominator.value = measure.beatUnit;
   tuplet.value = measure.tupleType || "none";
+  rudiment.value = measure.rudimentId || "none";
   
   if (measure.displayDuration) {
     displayDuration.value = measure.displayDuration;
@@ -410,6 +413,11 @@ function loadSelectedMeasureControls() {
   } else {
     displayDuration.value = measure.clickInterval || "8";
   }
+  
+  const isRudiment = rudiment.value !== "none";
+  displayDurationOptions.style.opacity = isRudiment ? "0.3" : "1";
+  displayDurationOptions.style.pointerEvents = isRudiment ? "none" : "auto";
+  tuplet.disabled = isRudiment;
   
   clickInterval.value = measure.clickInterval;
   straightGrid.checked = Boolean(measure.straightGrid);
@@ -421,6 +429,7 @@ function saveControlsToSelectedMeasure() {
   measure.beats = clampNumerator(timeNumerator.value);
   measure.beatUnit = Number(timeDenominator.value);
   measure.tupleType = getSelectedTuplet();
+  measure.rudimentId = rudiment.value;
   measure.displayDuration = displayDuration.value;
   measure.clickInterval = clickInterval.value;
   measure.straightGrid = straightGrid.checked;
@@ -469,9 +478,20 @@ function getPattern(measure = getSelectedMeasure()) {
   const tupletValue = getSelectedTuplet(measure);
   const displayDuration = measure.sound ? (measure.displayDuration || measure.tupleValue || clickDuration) : null;
   
-  const events = measure.sound
+  let events = measure.sound
     ? getDisplayEvents(beats, beatUnit, displayDuration, tupletValue)
     : getSilentEvents(beats, beatUnit);
+
+  if (measure.sound && measure.rudimentId && measure.rudimentId !== "none" && typeof PAS_RUDIMENTS !== "undefined") {
+    const rudimentData = PAS_RUDIMENTS.find(r => r.id === measure.rudimentId);
+    if (rudimentData && rudimentData.pattern.length === events.length) {
+      events = events.map((event, index) => ({
+        ...event,
+        ...rudimentData.pattern[index]
+      }));
+    }
+  }
+
   const clickEvents = measure.sound
     ? getClickEvents(beats, beatUnit, clickDuration, measure.straightGrid ? null : tupletValue, displayDuration)
     : [];
@@ -659,7 +679,43 @@ function renderNotation(measureIndex) {
         noteOptions.stem_direction = 1;
       }
 
-      return new VF.StaveNote(noteOptions);
+      const note = new VF.StaveNote(noteOptions);
+      if (event.isNote) {
+        if (event.stick) {
+          note.addModifier(new VF.Annotation(event.stick).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
+        }
+        if (event.accent) {
+          note.addModifier(new VF.Articulation("a>").setPosition(VF.Modifier.Position.ABOVE), 0);
+        }
+        if (event.flam) {
+          const grace = new VF.GraceNote({ keys: ["b/4"], duration: "8", slash: true });
+          grace.setStemDirection(1);
+          if (event.flamSticking) {
+            grace.addModifier(new VF.Annotation(event.flamSticking).setFont("Arial", 8).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
+          }
+          const graceGroup = new VF.GraceNoteGroup([grace], true);
+          note.addModifier(graceGroup, 0);
+        }
+        if (event.drag) {
+          const grace1 = new VF.GraceNote({ keys: ["b/4"], duration: "16", slash: false });
+          const grace2 = new VF.GraceNote({ keys: ["b/4"], duration: "16", slash: false });
+          grace1.setStemDirection(1);
+          grace2.setStemDirection(1);
+          if (event.dragSticking) {
+             grace1.addModifier(new VF.Annotation(event.dragSticking[0]).setFont("Arial", 8).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
+             grace2.addModifier(new VF.Annotation(event.dragSticking[1]).setFont("Arial", 8).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
+          }
+          const graceGroup = new VF.GraceNoteGroup([grace1, grace2], true);
+          if (typeof graceGroup.beamNotes === "function") {
+            graceGroup.beamNotes();
+          }
+          note.addModifier(graceGroup, 0);
+        }
+        if (event.tremolo) {
+          note.addModifier(new VF.Tremolo(event.tremolo), 0);
+        }
+      }
+      return note;
     });
 
     const noteTickables = tickables.filter((tickable, index) => pattern.events[index].isNote);
@@ -698,8 +754,8 @@ function renderNotation(measureIndex) {
     if (typeof stave.getYForLine === "function") {
       const topY = stave.getYForLine(0);
       const bottomY = stave.getYForLine(4);
-      viewBoxY = topY - 32;
-      renderHeight = (bottomY - topY) + 48;
+      viewBoxY = topY - 44;
+      renderHeight = (bottomY - topY) + 84;
     }
 
     renderer.resize(renderWidth, renderHeight);
@@ -1162,6 +1218,20 @@ timeNumerator.addEventListener("input", updateRhythm);
 timeDenominator.addEventListener("change", updateRhythm);
 tuplet.addEventListener("change", updateRhythm);
 straightGrid.addEventListener("change", updateRhythm);
+
+rudiment.addEventListener("change", (event) => {
+  const rudimentId = event.target.value;
+  if (rudimentId !== "none" && typeof PAS_RUDIMENTS !== "undefined") {
+    const rudimentData = PAS_RUDIMENTS.find(r => r.id === rudimentId);
+    if (rudimentData) {
+      timeNumerator.value = rudimentData.timeSignature[0];
+      timeDenominator.value = rudimentData.timeSignature[1];
+      tuplet.value = rudimentData.tuplet ? String(rudimentData.tuplet) : "none";
+      displayDuration.value = rudimentData.grid;
+    }
+  }
+  updateRhythm();
+});
 resetButton.addEventListener("click", resetPlayback);
 toggleButton.addEventListener("click", async () => {
   if (isRunning) {
@@ -1224,6 +1294,15 @@ function renderIntervalIcons() {
 }
 
 async function initializeApp() {
+  if (typeof PAS_RUDIMENTS !== "undefined") {
+    rudiment.innerHTML = "";
+    PAS_RUDIMENTS.forEach(r => {
+      const option = document.createElement("option");
+      option.value = r.id;
+      option.textContent = r.name;
+      rudiment.appendChild(option);
+    });
+  }
   syncBpm(100);
   loadSelectedMeasureControls();
   renderMeasureStack();

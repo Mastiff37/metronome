@@ -129,18 +129,22 @@
               <button type="button" class="interval-btn" data-value="16" aria-label="Sixteenth"></button>
               <button type="button" class="interval-btn" data-value="32" aria-label="Thirty-second"></button>
             </div>
+            <div class="subtle-right-row">
+              <label for="tuplet" class="justify-right">Tuple</label>
+              <select id="tuplet">
+                <option value="none">None</option>
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="7">7</option>
+                <option value="9">9</option>
+              </select>
+              <label for="rudiment" class="justify-right">Rudiment</label>
+              <select id="rudiment">
+                <option value="none">None</option>
+              </select>
+            </div>
           </div>
-          <div class="subtle-right-row">
-            <label for="tuplet">Tuple</label>
-            <select id="tuplet" aria-label="Tuple type">
-              <option value="none" selected>None</option>
-              <option value="3">3</option>
-              <option value="5">5</option>
-              <option value="7">7</option>
-              <option value="9">9</option>
-            </select>
-          </div>
-
+          
           <div class="section-divider"><span>Click</span></div>
           <div class="control-group">
             <div class="interval-options" id="clickIntervalOptions">
@@ -162,6 +166,7 @@
     </main>
   </div>
 
+  <script src="rudiments.js"></script>
   <script src="app.js"></script>
 </body>
 
