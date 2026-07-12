@@ -1,83 +1,43 @@
 const PAS_RUDIMENTS = [
-  {
-    id: "none",
-    name: "None"
-  },
-  {
-    id: "single_stroke_roll",
-    name: "1. Single Stroke Roll",
-    timeSignature: [2, 4],
-    grid: "16",
-    tuplet: null,
-    pattern: [
-      { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" },
-      { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }
-    ]
-  },
-  {
-    id: "double_stroke_roll",
-    name: "3. Double Stroke Roll",
-    timeSignature: [2, 4],
-    grid: "q",
-    tuplet: null,
-    pattern: [
-      { stick: "RR", tremolo: 2 },
-      { stick: "LL", tremolo: 2 }
-    ]
-  },
-  {
-    id: "single_paradiddle",
-    name: "16. Single Paradiddle",
-    timeSignature: [2, 4],
-    grid: "16",
-    tuplet: null,
-    pattern: [
-      { stick: "R", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "R" },
-      { stick: "L", accent: true }, { stick: "R" }, { stick: "L" }, { stick: "L" }
-    ]
-  },
-  {
-    id: "flam",
-    name: "20. Flam",
-    timeSignature: [2, 4],
-    grid: "q",
-    tuplet: null,
-    pattern: [
-      { stick: "R", flam: "l", flamSticking: "l" },
-      { stick: "L", flam: "r", flamSticking: "r" }
-    ]
-  },
-  {
-    id: "flam_accent",
-    name: "21. Flam Accent",
-    timeSignature: [6, 8],
-    grid: "8",
-    tuplet: null,
-    pattern: [
-      { stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "L" }, { stick: "R" },
-      { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "R" }, { stick: "L" }
-    ]
-  },
-  {
-    id: "flam_tap",
-    name: "22. Flam Tap",
-    timeSignature: [2, 4],
-    grid: "8",
-    tuplet: null,
-    pattern: [
-      { stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "R" },
-      { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "L" }
-    ]
-  },
-  {
-    id: "drag",
-    name: "31. Drag",
-    timeSignature: [2, 4],
-    grid: "q",
-    tuplet: null,
-    pattern: [
-      { stick: "R", drag: "ll", dragSticking: ["l", "l"] },
-      { stick: "L", drag: "rr", dragSticking: ["r", "r"] }
-    ]
-  }
+  { id: "none", name: "None" },
+  { id: "single_stroke_roll", name: "1. Single Stroke Roll", note: "Reverse sticking starts L R L R…", timeSignature: [2, 4], grid: "16", tuplet: null, pattern: [{ stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }] },
+  { id: "single_stroke_four", name: "2. Single Stroke Four", timeSignature: [4, 4], grid: "8", tuplet: 3, tupletGroups: [{ start: 0, count: 3, occupied: 2 }, { start: 4, count: 3, occupied: 2 }], pattern: [{ stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L", duration: "q", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R", duration: "q", accent: true }] },
+  { id: "single_stroke_seven", name: "3. Single Stroke Seven", timeSignature: [4, 4], grid: "16", tuplet: 6, tupletGroups: [{ start: 0, count: 6, occupied: 4 }, { start: 7, count: 6, occupied: 4 }], pattern: [{ stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R", duration: "q", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L", duration: "q", accent: true }] },
+  { id: "multiple_bounce_roll", name: "4. Multiple Bounce Roll", timeSignature: [2, 4], grid: "q", tuplet: null, pattern: [{ stick: "R", buzz: true }, { stick: "L", buzz: true }] },
+  { id: "triple_stroke_roll", name: "5. Triple Stroke Roll", timeSignature: [2, 4], grid: "8", tuplet: 3, tupletGroups: [{ start: 0, count: 3, occupied: 2 }, { start: 3, count: 3, occupied: 2 }], pattern: [{ stick: "R" }, { stick: "R" }, { stick: "R" }, { stick: "L" }, { stick: "L" }, { stick: "L" }] },
+  { id: "double_stroke_roll", name: "6. Double Stroke Open Roll", timeSignature: [2, 4], grid: "q", tuplet: null, pattern: [{ stick: "R", tremolo: 2 }, { stick: "L", tremolo: 2 }] },
+  { id: "five_stroke_roll", name: "7. Five Stroke Roll", timeSignature: [2, 4], grid: "8", tuplet: null, ties: [[0, 1], [2, 3]], pattern: [{ stick: "R", tremolo: 2 }, { stick: "R", accent: true }, { stick: "L", tremolo: 2 }, { stick: "L", accent: true }] },
+  { id: "six_stroke_roll", name: "8. Six Stroke Roll", note: "Reverse sticking: L rr ll R | L rr ll R", timeSignature: [4, 4], grid: "8", tuplet: null, ties: [{ from: 1, to: 3, yShift: 14 }, { from: 5, to: 7, yShift: 14 }], pattern: [{ stick: "R", accent: true }, { stick: "L", tremolo: 1 }, { stick: "R", tremolo: 1 }, { stick: "L", accent: true }, { stick: "R", accent: true }, { stick: "L", tremolo: 1 }, { stick: "R", tremolo: 1 }, { stick: "L", accent: true }] },
+  { id: "seven_stroke_roll", name: "9. Seven Stroke Roll", timeSignature: [2, 4], grid: "8d", tuplet: null, ties: [[0, 1], [2, 3]], pattern: [{ stick: "R", tremolo: 2, duration: "8d" }, { stick: "L", duration: "16", accent: true }, { stick: "L", tremolo: 2, duration: "8d" }, { stick: "R", duration: "16", accent: true }] },
+  { id: "nine_stroke_roll", name: "10. Nine Stroke Roll", timeSignature: [4, 4], grid: "q", tuplet: null, ties: [[0, 1], [2, 3]], pattern: [{ stick: "R", tremolo: 3 }, { stick: "R", accent: true }, { stick: "L", tremolo: 3 }, { stick: "L", accent: true }] },
+  { id: "ten_stroke_roll", name: "11. Ten Stroke Roll", timeSignature: [4, 4], grid: "q", tuplet: null, ties: [[0, 1], [4, 5]], beamGroups: [[1, 2], [5, 6]], pattern: [{ stick: "R", tremolo: 3 }, { stick: "R", duration: "16", accent: true }, { stick: "L", duration: "16", accent: true }, { stick: "", duration: "8r" }, { stick: "L", tremolo: 3 }, { stick: "L", duration: "16", accent: true }, { stick: "R", duration: "16", accent: true }, { stick: "", duration: "8r" }] },
+  { id: "eleven_stroke_roll", name: "12. Eleven Stroke Roll", timeSignature: [4, 4], grid: "q", tuplet: null, ties: [[0, 1], [1, 2], [3, 4], [4, 5]], pattern: [{ stick: "R", tremolo: 3 }, { stick: "R", tremolo: 1, duration: "8" }, { stick: "L", duration: "8", accent: true }, { stick: "L", tremolo: 3 }, { stick: "L", tremolo: 1, duration: "8" }, { stick: "R", duration: "8", accent: true }] },
+  { id: "thirteen_stroke_roll", name: "13. Thirteen Stroke Roll", timeSignature: [4, 4], grid: "q", tuplet: null, ties: [[0, 1], [1, 2], [3, 4], [4, 5]], pattern: [{ stick: "R", tremolo: 3 }, { stick: "R", tremolo: 2, duration: "8" }, { stick: "R", accent: true, duration: "8" }, { stick: "L", tremolo: 3 }, { stick: "L", tremolo: 2, duration: "8" }, { stick: "L", accent: true, duration: "8" }] },
+  { id: "fifteen_stroke_roll", name: "14. Fifteen Stroke Roll", timeSignature: [4, 4], grid: "q", tuplet: null, ties: [[0, 1], [1, 2], [3, 4], [4, 5]], pattern: [{ stick: "R", tremolo: 3 }, { stick: "R", tremolo: 2, duration: "8d" }, { stick: "L", duration: "16", accent: true }, { stick: "L", tremolo: 3 }, { stick: "L", tremolo: 2, duration: "8d" }, { stick: "R", duration: "16", accent: true }] },
+  { id: "seventeen_stroke_roll", name: "15. Seventeen Stroke Roll", note: "Reverse sticking: L (roll) L", timeSignature: [4, 4], grid: "h", tuplet: null, ties: [[0, 1]], pattern: [{ stick: "R", tremolo: 3 }, { stick: "R", accent: true }] },
+  { id: "single_paradiddle", name: "16. Single Paradiddle", timeSignature: [2, 4], grid: "16", tuplet: null, pattern: [{ stick: "R", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "R" }, { stick: "L", accent: true }, { stick: "R" }, { stick: "L" }, { stick: "L" }] },
+  { id: "double_paradiddle", name: "17. Double Paradiddle", timeSignature: [6, 8], grid: "16", tuplet: null, pattern: [{ stick: "R", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "R" }, { stick: "L", accent: true }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "L" }] },
+  { id: "triple_paradiddle", name: "18. Triple Paradiddle", timeSignature: [4, 4], grid: "16", tuplet: null, pattern: [{ stick: "R", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "R" }, { stick: "L", accent: true }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "L" }] },
+  { id: "paradiddle_diddle", name: "19. Paradiddle-Diddle", timeSignature: [6, 8], grid: "16", tuplet: null, pattern: [{ stick: "R", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "R" }, { stick: "L" }, { stick: "L" }, { stick: "L", accent: true }, { stick: "R" }, { stick: "L" }, { stick: "L" }, { stick: "R" }, { stick: "R" }] },
+  { id: "flam", name: "20. Flam", timeSignature: [2, 4], grid: "q", tuplet: null, pattern: [{ stick: "R", flam: "l", flamSticking: "l" }, { stick: "L", flam: "r", flamSticking: "r" }] },
+  { id: "flam_accent", name: "21. Flam Accent", timeSignature: [6, 8], grid: "8", tuplet: null, pattern: [{ stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "R" }, { stick: "L" }] },
+  { id: "flam_tap", name: "22. Flam Tap", timeSignature: [2, 4], grid: "8", tuplet: null, pattern: [{ stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "R", accent: true }, { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "L", accent: true }] },
+  { id: "flamacue", name: "23. Flamacue", timeSignature: [4, 4], grid: "16", tuplet: null, pattern: [{ stick: "R", flam: "l", flamSticking: "l" }, { stick: "L", accent: true }, { stick: "R" }, { stick: "L" }, { stick: "R", flam: "l", flamSticking: "l", duration: "q" }, { stick: "L", flam: "r", flamSticking: "r" }, { stick: "R", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "L", flam: "r", flamSticking: "r", duration: "q" }] },
+  { id: "flam_paradiddle", name: "24. Flam Paradiddle", timeSignature: [2, 4], grid: "16", tuplet: null, pattern: [{ stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "R" }, { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "R" }, { stick: "L" }, { stick: "L" }] },
+  { id: "single_flammed_mill", name: "25. Single Flammed Mill", timeSignature: [2, 4], grid: "16", tuplet: null, pattern: [{ stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "L" }] },
+  { id: "flam_paradiddle_diddle", name: "26. Flam Paradiddle-Diddle", timeSignature: [6, 8], grid: "16", tuplet: null, pattern: [{ stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "R" }, { stick: "L" }, { stick: "L" }, { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "R" }, { stick: "L" }, { stick: "L" }, { stick: "R" }, { stick: "R" }] },
+  { id: "pataflafla", name: "27. Pataflafla", timeSignature: [2, 4], grid: "16", tuplet: null, pattern: [{ stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "L" }, { stick: "R" }, { stick: "L", flam: "r", flamSticking: "r", accent: true }] },
+  { id: "swiss_army_triplet", name: "28. Swiss Army Triplet", timeSignature: [2, 4], grid: "8", tuplet: 3, tupletGroups: [{ start: 0, count: 3, occupied: 2 }, { start: 3, count: 3, occupied: 2 }], pattern: [{ stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "R" }, { stick: "L" }, { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "L" }, { stick: "R" }] },
+  { id: "inverted_flam_tap", name: "29. Inverted Flam Tap", note: "Reverse sticking starts with the left-hand flam.", timeSignature: [2, 4], grid: "16", tuplet: null, pattern: [{ stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "L" }, { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "R" }, { stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "L" }, { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "R" }] },
+  { id: "flam_drag", name: "30. Flam Drag", timeSignature: [2, 4], grid: "16", tuplet: null, pattern: [{ stick: "R", flam: "l", flamSticking: "l", accent: true }, { stick: "L" }, { stick: "R", drag: "ll", dragSticking: ["l", "l"] }, { stick: "R" }, { stick: "L", flam: "r", flamSticking: "r", accent: true }, { stick: "R" }, { stick: "L", drag: "rr", dragSticking: ["r", "r"] }, { stick: "L" }] },
+  { id: "drag", name: "31. Drag", timeSignature: [2, 4], grid: "q", tuplet: null, pattern: [{ stick: "R", drag: "ll", dragSticking: ["l", "l"] }, { stick: "L", drag: "rr", dragSticking: ["r", "r"] }] },
+  { id: "single_drag_tap", name: "32. Single Drag Tap", timeSignature: [2, 4], grid: "8", tuplet: null, pattern: [{ stick: "R", drag: "ll", dragSticking: ["l", "l"] }, { stick: "L", accent: true }, { stick: "L", drag: "rr", dragSticking: ["r", "r"] }, { stick: "R", accent: true }] },
+  { id: "double_drag_tap", name: "33. Double Drag Tap", timeSignature: [6, 8], grid: "8", tuplet: null, pattern: [{ stick: "R", drag: "ll", dragSticking: ["l", "l"] }, { stick: "R", drag: "ll", dragSticking: ["l", "l"] }, { stick: "L", accent: true }, { stick: "L", drag: "rr", dragSticking: ["r", "r"] }, { stick: "L", drag: "rr", dragSticking: ["r", "r"] }, { stick: "R", accent: true }] },
+  { id: "lesson_25", name: "34. Lesson 25", timeSignature: [2, 4], grid: "16", tuplet: null, pattern: [{ stick: "R", drag: "ll", dragSticking: ["l", "l"] }, { stick: "L" }, { stick: "R", accent: true }, { stick: "", duration: "16r" }, { stick: "L", drag: "rr", dragSticking: ["r", "r"] }, { stick: "R" }, { stick: "L", accent: true }, { stick: "", duration: "16r" }] },
+  { id: "single_dragadiddle", name: "35. Single Dragadiddle", timeSignature: [2, 4], grid: "16", tuplet: null, pattern: [{ stick: "R", drag: "ll", dragSticking: ["l", "l"], accent: true }, { stick: "L" }, { stick: "R" }, { stick: "R" }, { stick: "L", drag: "rr", dragSticking: ["r", "r"], accent: true }, { stick: "R" }, { stick: "L" }, { stick: "L" }] },
+  { id: "drag_paradiddle_1", name: "36. Drag Paradiddle #1", timeSignature: [6, 8], grid: "16", tuplet: null, pattern: [{ stick: "R", duration: "8", accent: true }, { stick: "R", drag: "ll", dragSticking: ["l", "l"] }, { stick: "L" }, { stick: "R" }, { stick: "R" }, { stick: "L", duration: "8", accent: true }, { stick: "L", drag: "rr", dragSticking: ["r", "r"] }, { stick: "R" }, { stick: "L" }, { stick: "L" }] },
+  { id: "drag_paradiddle_2", name: "37. Drag Paradiddle #2", timeSignature: [7, 8], grid: "16", tuplet: null, pattern: [{ stick: "R", duration: "8", accent: true }, { stick: "R", drag: "ll", dragSticking: ["l", "l"] }, { stick: "R", drag: "ll", dragSticking: ["l", "l"] }, { stick: "L" }, { stick: "R" }, { stick: "R" }, { stick: "L", duration: "8", accent: true }, { stick: "L", drag: "rr", dragSticking: ["r", "r"] }, { stick: "L", drag: "rr", dragSticking: ["r", "r"] }, { stick: "R" }, { stick: "L" }, { stick: "L" }] },
+  { id: "single_ratamacue", name: "38. Single Ratamacue", timeSignature: [6, 8], grid: "16", tuplet: 3, tupletGroups: [{ start: 1, count: 3, occupied: 2 }, { start: 6, count: 3, occupied: 2 }], pattern: [{ stick: "R", drag: "ll", dragSticking: ["l", "l"], duration: "8" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R", duration: "8", accent: true }, { stick: "L", drag: "rr", dragSticking: ["r", "r"], duration: "8" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L", duration: "8", accent: true }] },
+  { id: "double_ratamacue", name: "39. Double Ratamacue", timeSignature: [4, 4], grid: "16", tuplet: 3, tupletGroups: [{ start: 2, count: 3, occupied: 2 }, { start: 8, count: 3, occupied: 2 }], pattern: [{ stick: "R", drag: "ll", dragSticking: ["l", "l"], duration: "8" }, { stick: "R", drag: "ll", dragSticking: ["l", "l"], duration: "8" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R", duration: "8", accent: true }, { stick: "L", drag: "rr", dragSticking: ["r", "r"], duration: "8" }, { stick: "L", drag: "rr", dragSticking: ["r", "r"], duration: "8" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L", duration: "8", accent: true }] },
+  { id: "triple_ratamacue", name: "40. Triple Ratamacue", timeSignature: [10, 8], grid: "16", tuplet: 3, tupletGroups: [{ start: 3, count: 3, occupied: 2 }, { start: 10, count: 3, occupied: 2 }], pattern: [{ stick: "R", drag: "ll", dragSticking: ["l", "l"], duration: "8" }, { stick: "R", drag: "ll", dragSticking: ["l", "l"], duration: "8" }, { stick: "R", drag: "ll", dragSticking: ["l", "l"], duration: "8" }, { stick: "L" }, { stick: "R" }, { stick: "L" }, { stick: "R", duration: "8", accent: true }, { stick: "L", drag: "rr", dragSticking: ["r", "r"], duration: "8" }, { stick: "L", drag: "rr", dragSticking: ["r", "r"], duration: "8" }, { stick: "L", drag: "rr", dragSticking: ["r", "r"], duration: "8" }, { stick: "R" }, { stick: "L" }, { stick: "R" }, { stick: "L", duration: "8", accent: true }] }
 ];
