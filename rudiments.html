@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PAS 40 Rudiments Review</title>
+  <style>
+    body { font-family: sans-serif; background: #f0f2f5; color: #111; padding: 20px; }
+    h1 { text-align: center; color: #333; }
+    .rudiment-container { background: #ffffff; margin: 20px auto; padding: 20px; border-radius: 8px; max-width: 800px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .rudiment-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: #2b7bc4; border-bottom: 1px solid #eee; padding-bottom: 10px;}
+    .notation-container { width: 100%; height: 120px; }
+    .rudiment-note { margin: -4px 0 8px; color: #667085; font-size: 0.78rem; }
+    body:has(.rudiment-container:target) .rudiment-container:not(:target) { display: none; }
+  </style>
+</head>
+<body>
+  <h1>PAS 40 Drum Rudiments</h1>
+  <div id="rudiments-list"></div>
+
+  <script src="https://unpkg.com/vexflow@4.2.2/build/cjs/vexflow.js"></script>
+  <script src="rudiments.js"></script>
+  <script>
+    const VF = Vex.Flow;
+    const list = document.getElementById("rudiments-list");
+
+    PAS_RUDIMENTS.forEach((rudiment, index) => {
+      if (rudiment.id === "none") return;
+
+      const container = document.createElement("div");
+      container.className = "rudiment-container";
+      container.id = `rudiment-${rudiment.id}`;
+      
+      const title = document.createElement("div");
+      title.className = "rudiment-title";
+      title.textContent = rudiment.name;
+      container.appendChild(title);
+
+      if (rudiment.note) {
+        const note = document.createElement("div");
+        note.className = "rudiment-note";
+        note.textContent = rudiment.note;
+        container.appendChild(note);
+      }
+
+      const notation = document.createElement("div");
+      notation.className = "notation-container";
+      container.appendChild(notation);
+      list.appendChild(container);
+
+      // Render
+      try {
+        const renderer = new VF.Renderer(notation, VF.Renderer.Backends.SVG);
+        renderer.resize(760, 120);
+        const context = renderer.getContext();
+        
+        const stave = new VF.Stave(36, 10, 700);
+        stave.addTimeSignature(`${rudiment.timeSignature[0]}/${rudiment.timeSignature[1]}`);
+        stave.setContext(context);
+
+        const tickables = rudiment.pattern.map((event) => {
+          let duration = event.duration || rudiment.grid;
+          if (event.buzz) duration = rudiment.grid; 
+          
+          const isRest = duration.includes("r");
+
+          const noteOptions = {
+            keys: ["b/4"],
+            duration: duration
+          };
+          if (!isRest) {
+            noteOptions.stem_direction = 1;
+          }
+
+          const note = new VF.StaveNote(noteOptions);
+          
+          if (event.stick) {
+            note.addModifier(
+              new VF.Annotation(event.stick)
+                .setFont("Arial", 10)
+                .setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM),
+              0
+            );
+          }
+          if (event.accent) {
+            note.addModifier(new VF.Articulation("a>").setPosition(VF.Modifier.Position.ABOVE), 0);
+          }
+          if (event.buzz) {
+             // Buzz roll approximation
+             note.addModifier(new VF.Annotation("z").setFont("Arial", 12).setVerticalJustification(VF.Annotation.VerticalJustify.CENTER_STEM), 0);
+          }
+          if (event.tremolo) {
+            note.addModifier(new VF.Tremolo(event.tremolo), 0);
+          }
+          if (event.flam) {
+            const grace = new VF.GraceNote({ keys: ["b/4"], duration: "8", slash: true });
+            grace.setStemDirection(1);
+            if (event.flamSticking) {
+              grace.addModifier(new VF.Annotation(event.flamSticking).setFont("Arial", 8).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
+            }
+            const graceGroup = new VF.GraceNoteGroup([grace], true);
+            note.addModifier(graceGroup, 0);
+          }
+          if (event.drag) {
+            const grace1 = new VF.GraceNote({ keys: ["b/4"], duration: "16", slash: false });
+            const grace2 = new VF.GraceNote({ keys: ["b/4"], duration: "16", slash: false });
+            grace1.setStemDirection(1);
+            grace2.setStemDirection(1);
+            if (typeof grace1.setStemLength === "function") grace1.setStemLength(12);
+            if (typeof grace2.setStemLength === "function") grace2.setStemLength(12);
+            if (event.dragSticking) {
+               grace1.addModifier(new VF.Annotation(event.dragSticking[0]).setFont("Arial", 8).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
+               grace2.addModifier(new VF.Annotation(event.dragSticking[1]).setFont("Arial", 8).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
+            }
+            const graceGroup = new VF.GraceNoteGroup([grace1, grace2], true);
+            if (typeof graceGroup.beamNotes === "function") graceGroup.beamNotes();
+            note.addModifier(graceGroup, 0);
+          }
+
+          // Handle tuplets on a per-note basis if specified in the pattern
+          if (event.tuplet || rudiment.tuplet) {
+            // Rough approximation for visual review page
+          }
+
+          return note;
+        });
+
+        // Keep each tuplet together as one visual group. VexFlow's automatic
+        // beaming otherwise splits these at the ordinary beat boundaries.
+        const tupletIndexes = new Set();
+        (rudiment.tupletGroups || []).forEach((group) => {
+          for (let index = group.start; index < group.start + group.count; index += 1) {
+            tupletIndexes.add(index);
+          }
+        });
+        const forcedBeamIndexes = new Set((rudiment.beamGroups || []).flat());
+        const regularTickables = tickables.filter((tickable, index) => !tickable.isRest() && !tupletIndexes.has(index) && !forcedBeamIndexes.has(index));
+        const beams = VF.Beam.generateBeams(regularTickables, { stem_direction: 1 });
+        (rudiment.tupletGroups || []).forEach((group) => {
+          const notes = tickables.slice(group.start, group.start + group.count).filter(note => !note.isRest());
+          if (notes.length > 1) beams.push(new VF.Beam(notes));
+        });
+        (rudiment.beamGroups || []).forEach((indexes) => {
+          const notes = indexes.map(index => tickables[index]).filter(note => note && !note.isRest());
+          if (notes.length > 1) beams.push(new VF.Beam(notes));
+        });
+
+        const voice = new VF.Voice({
+          num_beats: rudiment.timeSignature[0],
+          beat_value: rudiment.timeSignature[1]
+        }).setStrict(false); // disable strict to allow rough visual patterns
+
+        voice.addTickables(tickables);
+        new VF.Formatter().joinVoices([voice]).format([voice], 600);
+
+        const tuplets = (rudiment.tupletGroups || []).map((group) => {
+          const notes = tickables.slice(group.start, group.start + group.count);
+          return new VF.Tuplet(notes, {
+            num_notes: group.count,
+            notes_occupied: group.occupied,
+            bracketed: true,
+            ratioed: false
+          });
+        });
+        
+        stave.draw();
+        voice.draw(context, stave);
+        beams.forEach(b => b.setContext(context).draw());
+        tuplets.forEach(tuplet => tuplet.setContext(context).draw());
+        (rudiment.ties || []).forEach((tieData) => {
+          const { from, to, yShift = 7 } = Array.isArray(tieData)
+            ? { from: tieData[0], to: tieData[1] }
+            : tieData;
+          const tie = new VF.StaveTie({
+            first_note: tickables[from],
+            last_note: tickables[to],
+            first_indices: [0],
+            last_indices: [0]
+          });
+          if (typeof tie.setDirection === "function") tie.setDirection(1);
+          if (tie.render_options) tie.render_options.y_shift = yShift;
+          tie.setContext(context).draw();
+        });
+
+        // Shift viewBox for padding
+        const svg = notation.querySelector("svg");
+        if (svg) {
+          const topY = stave.getYForLine(0);
+          const bottomY = stave.getYForLine(4);
+          const needsExtraTopRoom = Boolean(rudiment.tupletGroups?.length && rudiment.pattern.some(event => event.flam || event.accent));
+          const topPadding = needsExtraTopRoom ? 62 : 44;
+          svg.setAttribute("viewBox", `0 ${topY - topPadding} 760 ${(bottomY - topY) + topPadding + 40}`);
+        }
+      } catch (e) {
+        console.error("Error rendering rudiment:", rudiment.name, e);
+        notation.textContent = "Error rendering: " + e.message;
+      }
+    });
+  </script>
+</body>
+</html>
