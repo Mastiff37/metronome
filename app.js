@@ -471,6 +471,44 @@ function syncRhythmOptions() {
   syncIntervalButtons(clickIntervalOptions, clickInterval, isUsableClickInterval);
 }
 
+function getRudimentDurationUnits(duration) {
+  const notationDuration = String(duration).replace("r", "");
+  const isDotted = notationDuration.endsWith("d");
+  const baseDuration = isDotted ? notationDuration.slice(0, -1) : notationDuration;
+  return getDurationUnits(baseDuration) * (isDotted ? 1.5 : 1);
+}
+
+function getRudimentDisplayEvents(rudimentData) {
+  const tupletMultipliers = new Map();
+  (rudimentData.tupletGroups || []).forEach((group, groupIndex) => {
+    const multiplier = group.occupied / group.count;
+    for (let index = group.start; index < group.start + group.count; index += 1) {
+      tupletMultipliers.set(index, { multiplier, groupIndex });
+    }
+  });
+
+  let startUnits = 0;
+  return rudimentData.pattern.map((rudimentEvent, index) => {
+    const sourceDuration = rudimentEvent.duration || rudimentData.grid;
+    const isRest = String(sourceDuration).includes("r");
+    const duration = String(sourceDuration).replace("r", "");
+    const tupletInfo = tupletMultipliers.get(index);
+    const durationUnits = getRudimentDurationUnits(duration) * (tupletInfo?.multiplier || 1);
+    const event = {
+      ...rudimentEvent,
+      duration,
+      durationUnits,
+      isNote: !isRest,
+      startUnits,
+      tuplet: tupletInfo ? rudimentData.tuplet : null,
+      tupletGroup: tupletInfo?.groupIndex ?? null,
+      tupletIndex: tupletInfo ? index - rudimentData.tupletGroups[tupletInfo.groupIndex].start : null,
+    };
+    startUnits += durationUnits;
+    return event;
+  });
+}
+
 function getPattern(measure = getSelectedMeasure()) {
   const { beats, beatUnit } = getTimeSignature(measure);
   const clickDuration = measure.clickInterval;
@@ -478,19 +516,14 @@ function getPattern(measure = getSelectedMeasure()) {
   const tupletValue = getSelectedTuplet(measure);
   const displayDuration = measure.sound ? (measure.displayDuration || measure.tupleValue || clickDuration) : null;
   
-  let events = measure.sound
-    ? getDisplayEvents(beats, beatUnit, displayDuration, tupletValue)
-    : getSilentEvents(beats, beatUnit);
-
-  if (measure.sound && measure.rudimentId && measure.rudimentId !== "none" && typeof PAS_RUDIMENTS !== "undefined") {
-    const rudimentData = PAS_RUDIMENTS.find(r => r.id === measure.rudimentId);
-    if (rudimentData && rudimentData.pattern.length === events.length) {
-      events = events.map((event, index) => ({
-        ...event,
-        ...rudimentData.pattern[index]
-      }));
-    }
-  }
+  const rudimentData = measure.sound && measure.rudimentId && measure.rudimentId !== "none" && typeof PAS_RUDIMENTS !== "undefined"
+    ? PAS_RUDIMENTS.find(r => r.id === measure.rudimentId)
+    : null;
+  const events = !measure.sound
+    ? getSilentEvents(beats, beatUnit)
+    : rudimentData
+      ? getRudimentDisplayEvents(rudimentData)
+      : getDisplayEvents(beats, beatUnit, displayDuration, tupletValue);
 
   const clickEvents = measure.sound
     ? getClickEvents(beats, beatUnit, clickDuration, measure.straightGrid ? null : tupletValue, displayDuration)
@@ -508,6 +541,7 @@ function getPattern(measure = getSelectedMeasure()) {
     clickCount,
     measureUnits: getMeasureUnits(beats, beatUnit),
     sound: measure.sound,
+    rudiment: rudimentData,
   };
 }
 
@@ -533,6 +567,31 @@ function getBeamGroupSize(pattern) {
 }
 
 function getBeamGroups(VF, pattern, tickables) {
+  if (pattern.rudiment) {
+    const tupletIndexes = new Set();
+    (pattern.rudiment.tupletGroups || []).forEach((group) => {
+      for (let index = group.start; index < group.start + group.count; index += 1) {
+        tupletIndexes.add(index);
+      }
+    });
+    const forcedBeamIndexes = new Set((pattern.rudiment.beamGroups || []).flat());
+    const regularTickables = tickables.filter((tickable, index) => (
+      pattern.events[index].isNote && !tupletIndexes.has(index) && !forcedBeamIndexes.has(index)
+    ));
+    const beams = VF.Beam.generateBeams(regularTickables, { stem_direction: 1 });
+
+    (pattern.rudiment.tupletGroups || []).forEach((group) => {
+      const notes = tickables.slice(group.start, group.start + group.count)
+        .filter((tickable, offset) => pattern.events[group.start + offset].isNote);
+      if (notes.length > 1) beams.push(new VF.Beam(notes));
+    });
+    (pattern.rudiment.beamGroups || []).forEach((indexes) => {
+      const notes = indexes.map(index => tickables[index]).filter(Boolean);
+      if (notes.length > 1) beams.push(new VF.Beam(notes));
+    });
+    return beams;
+  }
+
   const groupSize = getBeamGroupSize(pattern);
   const beams = [];
   let group = [];
@@ -682,7 +741,7 @@ function renderNotation(measureIndex) {
       const note = new VF.StaveNote(noteOptions);
       if (event.isNote) {
         if (event.stick) {
-          note.addModifier(new VF.Annotation(event.stick).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
+          note.addModifier(new VF.Annotation(event.stick).setFont("Arial", 10).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
         }
         if (event.accent) {
           note.addModifier(new VF.Articulation("a>").setPosition(VF.Modifier.Position.ABOVE), 0);
@@ -701,6 +760,8 @@ function renderNotation(measureIndex) {
           const grace2 = new VF.GraceNote({ keys: ["b/4"], duration: "16", slash: false });
           grace1.setStemDirection(1);
           grace2.setStemDirection(1);
+          if (typeof grace1.setStemLength === "function") grace1.setStemLength(12);
+          if (typeof grace2.setStemLength === "function") grace2.setStemLength(12);
           if (event.dragSticking) {
              grace1.addModifier(new VF.Annotation(event.dragSticking[0]).setFont("Arial", 8).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
              grace2.addModifier(new VF.Annotation(event.dragSticking[1]).setFont("Arial", 8).setVerticalJustification(VF.Annotation.VerticalJustify.BOTTOM), 0);
@@ -714,14 +775,27 @@ function renderNotation(measureIndex) {
         if (event.tremolo) {
           note.addModifier(new VF.Tremolo(event.tremolo), 0);
         }
+        if (event.buzz) {
+          note.addModifier(new VF.Annotation("z").setFont("Arial", 12).setVerticalJustification(VF.Annotation.VerticalJustify.CENTER_STEM), 0);
+        }
       }
       return note;
     });
 
-    const noteTickables = tickables.filter((tickable, index) => pattern.events[index].isNote);
     const beams = getBeamGroups(VF, pattern, tickables);
     const renderedTuplets = [];
-    if (pattern.tuplet) {
+    if (pattern.rudiment?.tupletGroups?.length) {
+      pattern.rudiment.tupletGroups.forEach((group) => {
+        const tupletNotes = tickables.slice(group.start, group.start + group.count);
+        renderedTuplets.push(new VF.Tuplet(tupletNotes, {
+          num_notes: group.count,
+          notes_occupied: group.occupied,
+          bracketed: true,
+          ratioed: false,
+        }));
+      });
+    } else if (pattern.tuplet) {
+      const noteTickables = tickables.filter((tickable, index) => pattern.events[index].isNote);
       for (let start = 0; start < noteTickables.length; start += pattern.tuplet) {
         const tupletNotes = noteTickables.slice(start, start + pattern.tuplet);
         if (tupletNotes.length === pattern.tuplet) {
@@ -754,8 +828,13 @@ function renderNotation(measureIndex) {
     if (typeof stave.getYForLine === "function") {
       const topY = stave.getYForLine(0);
       const bottomY = stave.getYForLine(4);
-      viewBoxY = topY - 44;
-      renderHeight = (bottomY - topY) + 84;
+      const needsExtraTopRoom = Boolean(
+        pattern.rudiment?.tupletGroups?.length
+        && pattern.events.some(event => event.flam || event.accent)
+      );
+      const topPadding = needsExtraTopRoom ? 62 : 44;
+      viewBoxY = topY - topPadding;
+      renderHeight = (bottomY - topY) + topPadding + 40;
     }
 
     renderer.resize(renderWidth, renderHeight);
@@ -766,6 +845,21 @@ function renderNotation(measureIndex) {
       beams.forEach((beam) => beam.setContext(context).draw());
 
       renderedTuplets.forEach((renderedTuplet) => renderedTuplet.setContext(context).draw());
+
+      (pattern.rudiment?.ties || []).forEach((tieData) => {
+        const { from, to, yShift = 7 } = Array.isArray(tieData)
+          ? { from: tieData[0], to: tieData[1] }
+          : tieData;
+        const tie = new VF.StaveTie({
+          first_note: tickables[from],
+          last_note: tickables[to],
+          first_indices: [0],
+          last_indices: [0],
+        });
+        if (typeof tie.setDirection === "function") tie.setDirection(1);
+        if (tie.render_options) tie.render_options.y_shift = yShift;
+        tie.setContext(context).draw();
+      });
     } catch (decorationError) {
       console.warn(decorationError);
     }
