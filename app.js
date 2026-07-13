@@ -884,6 +884,97 @@ function describeMeasure(measure) {
   return measure.sound ? `${measure.beats}/${measure.beatUnit}, ${tupleText}` : `${measure.beats}/${measure.beatUnit}, silent`;
 }
 
+function getRudimentDisplayName(rudimentData) {
+  return rudimentData ? rudimentData.name.replace(/^\d+\.\s*/, "") : "";
+}
+
+function getRudimentMenuMarkup(measure, measureIndex) {
+  if (typeof PAS_RUDIMENTS === "undefined") return "";
+
+  const selectedRudiment = measure.rudimentId && measure.rudimentId !== "none"
+    ? PAS_RUDIMENTS.find(item => item.id === measure.rudimentId)
+    : null;
+  const selectedName = getRudimentDisplayName(selectedRudiment);
+  const groups = [
+    ["Rolls", PAS_RUDIMENTS.slice(1, 16)],
+    ["Diddles", PAS_RUDIMENTS.slice(16, 20)],
+    ["Flams", PAS_RUDIMENTS.slice(20, 31)],
+    ["Drags", PAS_RUDIMENTS.slice(31, 41)],
+  ];
+  const optionMarkup = (item) => `
+    <button class="rudiment-menu-option${measure.rudimentId === item.id ? " is-selected" : ""}"
+      type="button" data-rudiment-choice="${item.id}" data-rudiment-measure="${measureIndex}"
+      aria-pressed="${measure.rudimentId === item.id}">${item.name}</button>`;
+
+  return `
+    <div class="rudiment-picker">
+      <button class="rudiment-picker-toggle${selectedRudiment ? " has-rudiment" : ""}" type="button" data-toggle-rudiment-menu="${measureIndex}"
+        aria-expanded="false" aria-label="${selectedName ? `${selectedName}; change rudiment` : "Choose rudiment"} for measure ${measureIndex + 1}"
+        title="${selectedName || "Choose rudiment"}">
+        <svg class="rudiment-sheet-icon" viewBox="0 0 16 18" aria-hidden="true">
+          <path d="M3 1.5h7l3 3v12H3z"></path>
+          <path d="M10 1.5v3h3"></path>
+          <path d="M5.3 8h5.4M5.3 11h5.4M5.3 14h3.5"></path>
+        </svg>
+      </button>
+      <div class="rudiment-menu" data-rudiment-menu="${measureIndex}" hidden>
+        <div class="rudiment-menu-group">
+          <button class="rudiment-menu-option${!selectedRudiment ? " is-selected" : ""}"
+            type="button" data-rudiment-choice="none" data-rudiment-measure="${measureIndex}"
+            aria-pressed="${!selectedRudiment}">None</button>
+        </div>
+        ${groups.map(([heading, items]) => `
+          <div class="rudiment-menu-group">
+            <div class="rudiment-menu-heading">${heading}</div>
+            ${items.map(optionMarkup).join("")}
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function closeRudimentMenus() {
+  measureStack.querySelectorAll("[data-rudiment-menu]").forEach(menu => { menu.hidden = true; });
+  measureStack.querySelectorAll("[data-toggle-rudiment-menu]").forEach(button => button.setAttribute("aria-expanded", "false"));
+  measureStack.querySelectorAll(".measure-row").forEach(row => row.classList.remove("is-rudiment-menu-open"));
+}
+
+function chooseMeasureRudiment(measureIndex, rudimentId) {
+  saveControlsToSelectedMeasure();
+  selectedMeasureIndex = measureIndex;
+  const measure = measures[measureIndex];
+  const hadRudiment = Boolean(measure.rudimentId && measure.rudimentId !== "none");
+
+  if (!hadRudiment && rudimentId !== "none") {
+    measure.preRudimentSettings = {
+      beats: measure.beats,
+      beatUnit: measure.beatUnit,
+      tupleType: measure.tupleType,
+      displayDuration: measure.displayDuration,
+    };
+  }
+
+  measure.rudimentId = rudimentId;
+
+  if (rudimentId !== "none" && typeof PAS_RUDIMENTS !== "undefined") {
+    const rudimentData = PAS_RUDIMENTS.find(item => item.id === rudimentId);
+    if (rudimentData) {
+      measure.beats = rudimentData.timeSignature[0];
+      measure.beatUnit = rudimentData.timeSignature[1];
+      measure.tupleType = rudimentData.tuplet || null;
+      measure.displayDuration = rudimentData.grid;
+    }
+  } else if (measure.preRudimentSettings) {
+    Object.assign(measure, measure.preRudimentSettings);
+    delete measure.preRudimentSettings;
+  }
+
+  loadSelectedMeasureControls();
+  renderMeasureStack();
+  restartRunningClock();
+}
+
 function renderMeasureStack() {
   measureStack.innerHTML = measures.map((measure, index) => {
     const isSelected = index === selectedMeasureIndex ? " is-selected" : "";
@@ -895,6 +986,7 @@ function renderMeasureStack() {
                   <strong>Measure ${index + 1}</strong>
                   <span>${describeMeasure(measure)}</span>
                 </button>
+                ${getRudimentMenuMarkup(measure, index)}
                 <button class="mute-toggle" type="button" data-mute-measure="${index}" aria-label="${measure.sound ? 'Mute' : 'Unmute'} measure ${index + 1}" title="${measure.sound ? 'Mute' : 'Unmute'} measure">
                   ${measure.sound ? 
                     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>` : 
@@ -928,6 +1020,29 @@ function renderMeasureStack() {
 
   measureStack.querySelectorAll("[data-select-measure]").forEach((button) => {
     button.addEventListener("click", () => selectMeasure(Number(button.dataset.selectMeasure)));
+  });
+
+  measureStack.querySelectorAll("[data-toggle-rudiment-menu]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const index = Number(button.dataset.toggleRudimentMenu);
+      const menu = measureStack.querySelector(`[data-rudiment-menu="${index}"]`);
+      const willOpen = menu.hidden;
+      closeRudimentMenus();
+      if (willOpen) {
+        if (index !== selectedMeasureIndex) selectMeasure(index);
+        menu.hidden = false;
+        button.setAttribute("aria-expanded", "true");
+        button.closest(".measure-row").classList.add("is-rudiment-menu-open");
+      }
+    });
+  });
+
+  measureStack.querySelectorAll("[data-rudiment-choice]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      chooseMeasureRudiment(Number(button.dataset.rudimentMeasure), button.dataset.rudimentChoice);
+    });
   });
 
   measureStack.querySelectorAll("[data-delete-measure]").forEach((button) => {
@@ -1325,6 +1440,12 @@ rudiment.addEventListener("change", (event) => {
     }
   }
   updateRhythm();
+});
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".rudiment-picker")) closeRudimentMenus();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeRudimentMenus();
 });
 resetButton.addEventListener("click", resetPlayback);
 toggleButton.addEventListener("click", async () => {

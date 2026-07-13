@@ -253,8 +253,12 @@ main {
   background: var(--panel);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   border: 2px solid rgba(0, 0, 0, 0.25);
-  overflow: hidden;
+  overflow: visible;
   cursor: pointer;
+}
+
+.measure-row.is-rudiment-menu-open {
+  z-index: 20;
 }
 
 .measure-row.is-selected {
@@ -287,6 +291,110 @@ main {
 
 .measure-select span {
   display: none;
+}
+
+.rudiment-picker {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  z-index: 4;
+  pointer-events: auto;
+}
+
+.rudiment-picker-toggle {
+  display: grid;
+  place-items: center;
+  align-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0.82;
+}
+
+.rudiment-picker-toggle:hover,
+.rudiment-picker-toggle[aria-expanded="true"] {
+  color: var(--ink);
+  border-color: rgba(0, 0, 0, 0.38);
+  opacity: 1;
+}
+
+.rudiment-picker-toggle.has-rudiment {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(36, 113, 163, 0.2);
+  opacity: 1;
+}
+
+.rudiment-sheet-icon {
+  width: 15px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rudiment-menu {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  width: min(330px, calc(100vw - 64px));
+  max-height: 350px;
+  overflow-y: auto;
+  padding: 7px;
+  border: 1px solid rgba(0, 0, 0, 0.28);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+  cursor: default;
+}
+
+.rudiment-menu-group + .rudiment-menu-group {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--line);
+}
+
+.rudiment-menu-heading {
+  padding: 5px 8px 3px;
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rudiment-menu-option {
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.76rem;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.rudiment-menu-option:hover,
+.rudiment-menu-option:focus-visible {
+  background: rgba(36, 113, 163, 0.1);
+  outline: none;
+}
+
+.rudiment-menu-option.is-selected {
+  background: rgba(36, 113, 163, 0.16);
+  color: #145783;
+  font-weight: 750;
 }
 
 .delete-measure {
