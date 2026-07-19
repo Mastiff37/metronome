@@ -65,6 +65,7 @@ let selectedMeasureIndex = 0;
 let currentMeasureIndex = 0;
 let playheads = [];
 let vexFlowApi = null;
+let appInitialized = false;
 let measures = [
   {
     beats: 4,
@@ -87,6 +88,8 @@ const intervalLabels = {
   32: "thirty-second notes",
 };
 const maxDisplayedNotes = 64;
+const setupUrlVersion = "1";
+const validDurations = new Set(Object.keys(intervalLabels));
 // VexFlow 4.2.6 was never published; keep these pinned to real 4.2.5 entry points.
 const vexFlowModuleSources = [
   "https://cdn.jsdelivr.net/npm/vexflow@4.2.5/build/esm/entry/vexflow.js",
@@ -172,6 +175,122 @@ function clampBpm(value) {
 
 function clampDurationMinutes(value) {
   return Math.min(120, Math.max(1, Number.parseFloat(value) || 10));
+}
+
+function getMeasureUrlSuffix(index) {
+  return index === 0 ? "" : String(index + 1);
+}
+
+function getValidDuration(value, fallback) {
+  return validDurations.has(value) ? value : fallback;
+}
+
+function getValidTuple(value) {
+  if (!value || value === "none") return null;
+  const parsed = Number.parseInt(value, 10);
+  return [3, 5, 6, 7, 9].includes(parsed) ? parsed : null;
+}
+
+function getValidTimeSignature(value, fallbackBeats = 4, fallbackBeatUnit = 4) {
+  const match = /^(\d+)\/(4|8|16|32)$/.exec(value || "");
+  if (!match) return { beats: fallbackBeats, beatUnit: fallbackBeatUnit };
+  return {
+    beats: clampNumerator(match[1]),
+    beatUnit: Number(match[2]),
+  };
+}
+
+function getValidRudimentId(value) {
+  if (!value || value === "none" || typeof PAS_RUDIMENTS === "undefined") return "none";
+  return PAS_RUDIMENTS.some(item => item.id === value) ? value : "none";
+}
+
+function loadSetupFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("V")) return false;
+  if (params.get("V") !== setupUrlVersion) {
+    console.warn(`Unsupported setup URL version: ${params.get("V")}`);
+    return false;
+  }
+
+  const validTempoModes = new Set(["constant", "ramp", "updown"]);
+  const requestedMode = params.get("Mode");
+  tempoMode.value = validTempoModes.has(requestedMode) ? requestedMode : "constant";
+  bpmInput.value = clampBpm(params.get("Tempo") ?? bpmInput.value);
+  tempoStart.value = clampBpm(params.get("Start") ?? tempoStart.value);
+  tempoTarget.value = clampBpm(params.get("End") ?? tempoTarget.value);
+  tempoDuration.value = clampDurationMinutes(params.get("Minutes") ?? tempoDuration.value);
+
+  const requestedMeasureCount = Number.parseInt(params.get("Measures"), 10);
+  const measureCount = Math.min(maxMeasures, Math.max(1, requestedMeasureCount || 1));
+  const loadedMeasures = [];
+
+  for (let index = 0; index < measureCount; index += 1) {
+    const suffix = getMeasureUrlSuffix(index);
+    const timeSignature = getValidTimeSignature(params.get(`TimeSig${suffix}`));
+    const rudimentId = getValidRudimentId(params.get(`Rudiment${suffix}`));
+    const measure = {
+      ...timeSignature,
+      displayDuration: getValidDuration(params.get(`Div${suffix}`), "8"),
+      clickInterval: getValidDuration(params.get(`Click${suffix}`), "8"),
+      tupleType: getValidTuple(params.get(`Tuple${suffix}`)),
+      rudimentId,
+      sound: params.get(`Sound${suffix}`) !== "off",
+      straightGrid: params.get(`Straight${suffix}`) === "on",
+    };
+
+    if (rudimentId !== "none" && params.has(`PriorTimeSig${suffix}`)) {
+      const priorTimeSignature = getValidTimeSignature(params.get(`PriorTimeSig${suffix}`));
+      measure.preRudimentSettings = {
+        ...priorTimeSignature,
+        displayDuration: getValidDuration(params.get(`PriorDiv${suffix}`), "8"),
+        tupleType: getValidTuple(params.get(`PriorTuple${suffix}`)),
+      };
+    }
+
+    loadedMeasures.push(measure);
+  }
+
+  measures = loadedMeasures;
+  selectedMeasureIndex = 0;
+  currentMeasureIndex = 0;
+  return true;
+}
+
+function syncSetupUrl() {
+  if (!appInitialized) return;
+
+  const tempo = getTempoSettings();
+  const params = new URLSearchParams();
+  params.set("V", setupUrlVersion);
+  params.set("Mode", tempo.mode);
+  params.set("Tempo", String(tempo.constantBpm));
+  params.set("Start", String(tempo.startBpm));
+  params.set("End", String(tempo.targetBpm));
+  params.set("Minutes", String(tempo.durationSeconds / 60));
+  params.set("Measures", String(measures.length));
+
+  measures.forEach((measure, index) => {
+    const suffix = getMeasureUrlSuffix(index);
+    params.set(`TimeSig${suffix}`, `${measure.beats}/${measure.beatUnit}`);
+    params.set(`Div${suffix}`, measure.displayDuration || "8");
+    params.set(`Click${suffix}`, measure.clickInterval || "8");
+    params.set(`Tuple${suffix}`, measure.tupleType ? String(measure.tupleType) : "none");
+    params.set(`Rudiment${suffix}`, measure.rudimentId || "none");
+    params.set(`Sound${suffix}`, measure.sound ? "on" : "off");
+    params.set(`Straight${suffix}`, measure.straightGrid ? "on" : "off");
+
+    if (measure.rudimentId !== "none" && measure.preRudimentSettings) {
+      const prior = measure.preRudimentSettings;
+      params.set(`PriorTimeSig${suffix}`, `${prior.beats}/${prior.beatUnit}`);
+      params.set(`PriorDiv${suffix}`, prior.displayDuration || "8");
+      params.set(`PriorTuple${suffix}`, prior.tupleType ? String(prior.tupleType) : "none");
+    }
+  });
+
+  const query = params.toString().replace(/%2F/gi, "/");
+  const nextUrl = `${window.location.pathname}?${query}${window.location.hash}`;
+  window.history.replaceState(null, "", nextUrl);
 }
 
 function getTempoSettings() {
@@ -443,8 +562,6 @@ function syncTimeSignature() {
     straightGrid.checked = false;
   }
   syncRhythmOptions();
-  syncTempoTarget();
-  syncTempoDuration();
 }
 
 function syncIntervalButtons(container, valueObj, validationFn) {
@@ -1065,6 +1182,7 @@ function renderMeasureStack() {
   playheads = [];
   measures.forEach((_, index) => renderNotation(index));
   updateActiveMeasureClasses();
+  syncSetupUrl();
 }
 
 function updateActiveMeasureClasses() {
@@ -1400,6 +1518,7 @@ function updateTempoSettings() {
     currentTempoBpm = getTempoBpmAtTime(0);
     setDisplayedBpm(currentTempoBpm);
   }
+  syncSetupUrl();
 }
 
 bpmRange.addEventListener("input", (event) => {
@@ -1518,12 +1637,15 @@ async function initializeApp() {
       rudiment.appendChild(option);
     });
   }
-  syncBpm(100);
+  loadSetupFromUrl();
+  syncBpm(bpmInput.value);
   loadSelectedMeasureControls();
   renderMeasureStack();
   await loadVexFlow();
   renderIntervalIcons();
   renderMeasureStack();
+  appInitialized = true;
+  syncSetupUrl();
 }
 
 initializeApp();
